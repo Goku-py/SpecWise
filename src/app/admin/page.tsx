@@ -1,6 +1,8 @@
+import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { REGIONS } from "@/lib/regions"
 import { ToggleActiveButton } from "./toggle-button"
+import { LoginForm, LogoutButton } from "./login-form"
 
 export const dynamic = "force-dynamic"
 
@@ -23,6 +25,11 @@ interface AdminPageProps {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const c = await cookies()
+  const authed = c.get("admin_key")?.value === process.env.ADMIN_API_KEY
+
+  if (!authed) return <LoginForm />
+
   const params = await searchParams
   const region = params.region || "US"
 
@@ -73,7 +80,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Laptop Catalog</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Laptop Catalog</h1>
+            <LogoutButton />
+          </div>
           <p className="text-sm text-muted">{total} laptops</p>
         </div>
         <form action="/admin" method="GET" className="flex items-center gap-2">
