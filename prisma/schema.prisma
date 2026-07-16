@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Laptop {
+  id                String   @id @default(cuid())
+  brand             String
+  model             String
+  variant           String?
+  os                String
+  cpuBrand          String
+  cpuFamily         String
+  cpuGeneration     String?
+  cpuCores          Int?
+  cpuBenchmark      Int?
+  gpuType           String   @default("integrated")
+  gpuModel          String?
+  gpuVRAM           Int?
+  ramAmount         Int
+  ramType           String?
+  ramUpgradeable    Boolean  @default(false)
+  storageAmount     Int
+  storageType       String   @default("SSD")
+  storageExpandable Boolean  @default(false)
+  displaySize       Float
+  displayResolution String?
+  displayRefreshRate Int     @default(60)
+  displayPanelType  String?
+  displayBrightness Int?
+  displayColorGamut String?
+  displayTouch      Boolean  @default(false)
+  batteryCapacity   Int?
+  batteryLife       Int?
+  weight            Float?
+  buildMaterial     String?
+  webcamQuality     String?
+  ports             String[]
+  wireless          String?
+  securityFeatures  String[]
+  keyboardBacklit   Boolean  @default(false)
+  isTouchscreen     Boolean  @default(false)
+  isRefurbished     Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  isPopular         Boolean  @default(false)
+  imageUrl          String?
+  reviewScore       Float?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  prices         LaptopPrice[]
+
+  @@index([isActive, createdAt(sort: Desc)])
+}
+
+model LaptopPrice {
+  laptopId         String
+  region           String
+  retailer         String   @default("default")
+  currency         String
+  price            Int
+  url              String?
+  affiliateUrl     String?
+  priceLastUpdated DateTime @default(now())
+
+  laptop Laptop @relation(fields: [laptopId], references: [id], onDelete: Cascade)
+
+  // ponytail: retailer in the key so multiple sellers per laptop/region can coexist
+  @@id([laptopId, region, retailer])
+  @@index([region])
+  @@index([laptopId, region, price])
+}
+
+// ponytail: no TTL cleanup — 86K+ rows/day at 60 req/min/IP. Add a cron job
+// (DELETE FROM "RateLimit" WHERE "updatedAt" < now() - interval '24 hours')
+// or use the in-memory fallback exclusively in serverless.
+model RateLimit {
+  id        String   @id @default(uuid())
+  key       String
+  window    DateTime
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, window])
+}
+
+// ponytail: optional email leads captured at quiz end; answers kept for later send/resend
+model Lead {
+  id        String   @id @default(cuid())
+  email     String
+  region    String   @default("US")
+  answers   Json
+  createdAt DateTime @default(now())
+
+  @@unique([email, region])
+}
