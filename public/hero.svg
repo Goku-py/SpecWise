@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" font-family="Geist, system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#000" flood-opacity="0.08"/>
+    </filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Window chrome -->
+  <rect x="0" y="0" width="1200" height="750" rx="8" fill="#fff"/>
+  <rect x="0" y="0" width="1200" height="40" rx="8" fill="#f4f4f5"/>
+  <rect x="0" y="20" width="1200" height="20" fill="#f4f4f5"/>
+  <circle cx="18" cy="20" r="6" fill="#ef4444"/>
+  <circle cx="36" cy="20" r="6" fill="#f59e0b"/>
+  <circle cx="54" cy="20" r="6" fill="#10b981"/>
+  <text x="600" y="26" text-anchor="middle" fill="#71717a" font-size="12">SpecWise — Find the right laptop without learning every spec</text>
+
+  <!-- Header -->
+  <rect x="0" y="40" width="1200" height="56" fill="#ffffff"/>
+  <line x1="0" y1="96" x2="1200" y2="96" stroke="#e4e4e7" stroke-width="1"/>
+  <!-- Logo -->
+  <rect x="24" y="60" width="18" height="18" rx="4" fill="#10b981"/>
+  <text x="50" y="75" fill="#0a0a0a" font-size="16" font-weight="700">SpecWise</text>
+  <!-- Nav -->
+  <text x="820" y="74" fill="#71717a" font-size="13">Find a Laptop</text>
+  <text x="920" y="74" fill="#71717a" font-size="13">Browse Laptops</text>
+  <text x="1020" y="74" fill="#71717a" font-size="13">Compare</text>
+  <!-- Theme toggle circle -->
+  <rect x="1088" y="64" width="20" height="20" rx="10" fill="#e4e4e7"/>
+  <!-- Get Started button -->
+  <rect x="1120" y="62" width="64" height="24" rx="6" fill="#10b981"/>
+  <text x="1152" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Get Started</text>
+
+  <!-- Hero badge -->
+  <rect x="504" y="120" width="192" height="24" rx="999" fill="#d1fae5"/>
+  <text x="600" y="136" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500">✦ Laptop buying made simple</text>
+
+  <!-- Hero heading -->
+  <text x="600" y="180" text-anchor="middle" fill="#0a0a0a" font-size="32" font-weight="700">Find the right laptop</text>
+  <text x="600" y="216" text-anchor="middle" font-size="32" font-weight="700">
+    <tspan fill="#0a0a0a">without </tspan>
+    <tspan fill="url(#grad)">learning every spec</tspan>
+  </text>
+  <text x="600" y="248" text-anchor="middle" fill="#71717a" font-size="14">Answer a few simple questions and get laptop recommendations based on</text>
+  <text x="600" y="266" text-anchor="middle" fill="#71717a" font-size="14">your budget, workload, and preferences.</text>
+
+  <!-- Two CTA cards -->
+  <!-- Card 1: Quiz -->
+  <rect x="280" y="296" width="290" height="140" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="300" y="314" width="36" height="36" rx="8" fill="#d1fae5"/>
+  <text x="316" y="338" text-anchor="middle" font-size="16">✨</text>
+  <text x="352" y="336" fill="#0a0a0a" font-size="14" font-weight="600">Your Perfect Match</text>
+  <text x="300" y="362" fill="#71717a" font-size="11">Take our 3-minute quiz and get tailored</text>
+  <text x="300" y="378" fill="#71717a" font-size="11">laptop recommendations matched to</text>
+  <text x="300" y="394" fill="#71717a" font-size="11">your budget and needs.</text>
+  <text x="300" y="420" fill="#10b981" font-size="12" font-weight="500">Find My Laptop →</text>
+
+  <!-- Card 2: Browse -->
+  <rect x="630" y="296" width="290" height="140" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="650" y="314" width="36" height="36" rx="8" fill="#e4e4e7"/>
+  <text x="668" y="338" text-anchor="middle" font-size="16">🔍</text>
+  <text x="702" y="336" fill="#0a0a0a" font-size="14" font-weight="600">Explore the Catalog</text>
+  <text x="650" y="362" fill="#71717a" font-size="11">Browse a curated database of laptops,</text>
+  <text x="650" y="378" fill="#71717a" font-size="11">filter by specs, and compare models</text>
+  <text x="650" y="394" fill="#71717a" font-size="11">side by side.</text>
+  <text x="650" y="420" fill="#0a0a0a" font-size="12" font-weight="500">Browse Laptops →</text>
+
+  <!-- Use Cases section -->
+  <text x="600" y="490" text-anchor="middle" fill="#0a0a0a" font-size="18" font-weight="600">Popular Use Cases</text>
+  <text x="600" y="512" text-anchor="middle" fill="#71717a" font-size="12">Not sure where to start? Pick your use case.</text>
+
+  <!-- Use case cards -->
+  <rect x="240" y="532" width="160" height="72" rx="8" fill="#fff" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="260" y="560" font-size="16">🎓</text>
+  <text x="260" y="580" fill="#0a0a0a" font-size="12" font-weight="500">For Students</text>
+  <text x="260" y="594" fill="#71717a" font-size="10">Balanced, affordable</text>
+
+  <rect x="430" y="532" width="160" height="72" rx="8" fill="#fff" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="450" y="560" font-size="16">🎮</text>
+  <text x="450" y="580" fill="#0a0a0a" font-size="12" font-weight="500">For Gaming</text>
+  <text x="450" y="594" fill="#71717a" font-size="10">GPUs &amp; performance</text>
+
+  <rect x="620" y="532" width="160" height="72" rx="8" fill="#fff" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="640" y="560" font-size="16">💻</text>
+  <text x="640" y="580" fill="#0a0a0a" font-size="12" font-weight="500">For Coding</text>
+  <text x="640" y="594" fill="#71717a" font-size="10">RAM, CPU, Linux options</text>
+
+  <rect x="810" y="532" width="160" height="72" rx="8" fill="#fff" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="830" y="560" font-size="16">🎨</text>
+  <text x="830" y="580" fill="#0a0a0a" font-size="12" font-weight="500">For Creators</text>
+  <text x="830" y="594" fill="#71717a" font-size="10">Color-accurate displays</text>
+
+  <!-- Footer hint -->
+  <line x1="0" y1="715" x2="1200" y2="715" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="24" y="736" fill="#71717a" font-size="11">SpecWise — Open-source laptop recommendation engine</text>
+  <text x="1176" y="736" text-anchor="end" fill="#71717a" font-size="11">Next.js · Prisma · PostgreSQL</text>
+</svg>

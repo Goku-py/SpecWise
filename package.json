@@ -13,7 +13,7 @@
     "db:generate-laptops": "npx tsx scripts/generate-laptops.ts",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:fetch-images": "npx tsx scripts/fetch-images.ts",
-    "db:seed-weights": "npx tsx prisma/seed/use-case-weights.ts",
+    "db:seed-weights": "echo 'No-op: use-case weights not implemented'",
     "db:setup": "npm run db:generate-laptops && prisma migrate dev && npx tsx prisma/seed.ts"
   },
   "dependencies": {

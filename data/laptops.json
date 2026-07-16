@@ -10,7 +10,7 @@
     "cpuCores": 8,
     "gpuType": "integrated",
     "gpuModel": "Apple M3 GPU (8-core)",
-    "ramAmount": 16,
+    "ramAmount": 8,
     "ramType": "LPDDR5",
     "ramUpgradeable": false,
     "storageAmount": 512,
@@ -19,26 +19,25 @@
     "displaySize": 13.6,
     "displayResolution": "2560x1664",
     "displayRefreshRate": 60,
-    "displayPanelType": "IPS",
+    "displayPanelType": "LED",
     "displayBrightness": 500,
     "batteryLife": 15,
-    "weight": 1.24,
+    "weight": 1.2,
     "buildMaterial": "Aluminum",
     "webcamQuality": "1080p",
     "ports": [
-      "usb-c",
-      "headphone"
+      "usb-c"
     ],
-    "wireless": "WiFi 6E",
+    "wireless": "WiFi 6",
     "securityFeatures": [
-      "fingerprint",
-      "face"
+      "fingerprint"
     ],
     "keyboardBacklit": true,
-    "isTouchscreen": false,
+    "isTouchscreen": true,
     "isPopular": true,
     "reviewScore": 4.6,
-    "notes": "Best all-round ultraportable for students and professionals"
+    "notes": "Best all-round ultraportable for students and professionals",
+    "batteryCapacity": 52.6
   },
   {
     "brand": "Apple",
