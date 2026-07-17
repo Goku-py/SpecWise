@@ -26,7 +26,7 @@ class ErrorBoundary extends Component<Props, State> {
         <p className="text-sm text-muted">Something went wrong rendering this section.</p>
         <button
           onClick={() => this.setState({ hasError: false })}
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500"
+          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
         >
           Retry
         </button>

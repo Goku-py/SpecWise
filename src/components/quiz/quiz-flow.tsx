@@ -167,7 +167,7 @@ export function QuizFlow() {
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-xs text-muted">
           <span>Step {step + 1} of {totalQuestions}</span>
-          <span className={cn(mode === "simple" ? "text-emerald-500" : "text-blue-500")}>
+          <span className={cn(mode === "simple" ? "text-accent" : "text-blue-500")}>
             {mode === "simple" ? "Quick mode" : "Advanced mode"}
           </span>
         </div>
@@ -255,7 +255,7 @@ export function QuizFlow() {
                 className={cn(
                   "w-full rounded-xl border px-4 py-3.5 text-left transition-all duration-150",
                   isSelected
-                    ? "border-emerald-500/50 bg-emerald-500/10 text-foreground"
+                    ? "border-accent/50 bg-accent/10 text-foreground"
                     : currentQuestion.max && currentValue && Array.isArray(currentValue) && currentValue.length >= currentQuestion.max
                       ? "border-border bg-card/50 text-muted opacity-50"
                       : "border-border bg-card/50 text-muted hover:border-border hover:bg-card",
@@ -264,12 +264,12 @@ export function QuizFlow() {
                 <div className="flex items-center justify-between">
                   <span className={cn(
                     "text-sm font-medium",
-                    isSelected && "text-emerald-300"
+                    isSelected && "text-accent"
                   )}>
                     {opt.label}
                   </span>
                   {isSelected && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs text-white">
                       ✓
                     </span>
                   )}
@@ -294,7 +294,7 @@ export function QuizFlow() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-emerald-500/50"
+            className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-accent/50"
           />
         </div>
       )}
@@ -349,7 +349,7 @@ function ModeSelector({ onSelect }: { onSelect: (mode: QuestionMode) => void }) 
   return (
     <div className="mx-auto max-w-lg px-4 py-16 text-center sm:py-20">
       <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs text-muted">
-        <Monitor className="h-3.5 w-3.5 text-emerald-500" />
+        <Monitor className="h-3.5 w-3.5 text-accent" />
         Let&apos;s find your laptop
       </div>
       <h1 className="mb-2 text-3xl font-bold">How experienced are you with laptops?</h1>
@@ -359,9 +359,9 @@ function ModeSelector({ onSelect }: { onSelect: (mode: QuestionMode) => void }) 
       <div className="grid gap-4 sm:grid-cols-2">
         <button
           onClick={() => onSelect("simple")}
-          className="group rounded-xl border border-border bg-card/50 p-6 text-left transition hover:border-emerald-500/30 hover:bg-card"
+          className="group rounded-xl border border-border bg-card/50 p-6 text-left transition hover:border-accent/30 hover:bg-card"
         >
-          <Zap className="mb-3 h-6 w-6 text-emerald-500" />
+          <Zap className="mb-3 h-6 w-6 text-accent" />
           <h3 className="font-semibold text-foreground">Quick & Simple</h3>
           <p className="mt-1 text-sm leading-relaxed text-muted">
             Just a few essential questions. No technical specs needed — we handle the details.

@@ -92,7 +92,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             id="region"
             name="region"
             defaultValue={region}
-            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground outline-none focus:border-emerald-500/50"
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent/50"
           >
             {REGIONS.map(r => (
               <option key={r.code} value={r.code}>
@@ -102,7 +102,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </select>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/20"
+            className="rounded-lg bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/20"
           >
             Apply
           </button>

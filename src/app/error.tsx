@@ -11,7 +11,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <p className="mt-2 text-sm text-muted">An unexpected error occurred. Please try again.</p>
         <button
           onClick={reset}
-          className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+          className="mt-6 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
         >
           Try Again
         </button>

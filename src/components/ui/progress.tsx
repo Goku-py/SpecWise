@@ -11,7 +11,7 @@ export function Progress({ value, max = 100, className }: ProgressProps) {
   return (
     <div className={cn("h-2 w-full rounded-full bg-border", className)}>
       <div
-        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+        className="h-full rounded-full bg-accent transition-all duration-300"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -20,9 +20,9 @@ export function Progress({ value, max = 100, className }: ProgressProps) {
 
 export function MatchBadge({ score }: { score: number }) {
   const color =
-    score >= 85 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-    : score >= 70 ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-    : score >= 50 ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+    score >= 85 ? "bg-accent/20 text-accent border-accent/30"
+    : score >= 70 ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+    : score >= 50 ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
     : "bg-muted/20 text-muted border-muted/30"
 
   const label =

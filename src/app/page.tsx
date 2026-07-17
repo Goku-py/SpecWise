@@ -1,234 +1,193 @@
 import Link from "next/link"
 import {
-  ArrowRight,
-  Sparkles,
-  Zap,
-  Shield,
-  BarChart3,
-  GraduationCap,
-  Gamepad2,
-  Code,
-  Palette,
-  Search,
+  ArrowRight, Code, Gamepad2, Palette, GraduationCap, Briefcase,
+  ClipboardList, Cpu, Layers, ShoppingBag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const features = [
-  {
-    icon: Sparkles,
-    title: "Smart Matching",
-    desc: "We translate your needs into specs and find the perfect laptop match.",
-  },
-  {
-    icon: Zap,
-    title: "3-Minute Quiz",
-    desc: "Answer simple questions — no technical knowledge needed.",
-  },
-  {
-    icon: Shield,
-    title: "Honest Trade-offs",
-    desc: "We show you exactly what you gain and what you compromise.",
-  },
-  {
-    icon: BarChart3,
-    title: "Side-by-Side Compare",
-    desc: "Compare laptops across specs, price, and fit score.",
-  },
+const useCases = [
+  { icon: Code, label: "Software Development", desc: "RAM-heavy multitasking & Linux support.", href: "/category/coding" },
+  { icon: Gamepad2, label: "Competitive Gaming", desc: "High refresh rates & thermal overhead.", href: "/category/gaming" },
+  { icon: Palette, label: "Creative Studio", desc: "P3 color accuracy & sustained CPU power.", href: "/category/graphic-design" },
+  { icon: GraduationCap, label: "Academic Use", desc: "Portable, durable, all-day battery life.", href: "/category/student" },
+  { icon: Briefcase, label: "Business Executive", desc: "Premium build & enterprise security.", href: "/category/office" },
 ]
 
-const useCases = [
+const steps = [
+  { title: "Profile Quiz", desc: "Tell us about your daily tasks and environment." },
+  { title: "Spec Analysis", desc: "We parse 50k+ spec permutations against your needs." },
+  { title: "Smart Matching", desc: "Ranked recommendations with honest trade-offs." },
+  { title: "Compare & Buy", desc: "Side-by-side comparisons at the best regional price." },
+]
+
+const bentoCards = [
   {
-    icon: GraduationCap,
-    label: "For Students",
-    desc: "Balanced, affordable laptops for class",
-    href: "/category/student",
+    icon: Cpu, title: "Intelligent Matching", desc: "Our engine evaluates 50,000+ spec permutations against your workflow.",
+    stat: { value: "93%", label: "accuracy rate" }, colSpan: "md:col-span-2", delay: "0.1s",
   },
   {
-    icon: Gamepad2,
-    label: "For Gaming",
-    desc: "GPUs, refresh rates, and performance",
-    href: "/category/gaming",
+    icon: ClipboardList, title: "3-Min Quiz", desc: "Simple questions, no jargon.",
+    colSpan: "md:col-span-1", delay: "0.15s",
   },
   {
-    icon: Code,
-    label: "For Coding",
-    desc: "RAM, CPU, and Linux-friendly options",
-    href: "/category/coding",
+    icon: Layers, title: "2k+ Models", desc: "Every model vetted for quality.",
+    colSpan: "md:col-span-1", delay: "0.2s",
   },
   {
-    icon: Palette,
-    label: "For Creators",
-    desc: "Color-accurate displays, powerful CPUs",
-    href: "/category/graphic-design",
+    icon: ShoppingBag, title: "Honest Matching", desc: "Unbiased recommendations based on real performance.",
+    colSpan: "md:col-span-2", delay: "0.25s",
+  },
+  {
+    icon: Briefcase, title: "Global Pricing", desc: "Real-time prices across 12 regions.",
+    colSpan: "md:col-span-1", delay: "0.3s",
   },
 ]
 
 export default function HomePage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <div>
       {/* ───── Hero ───── */}
-      <section className="flex flex-col items-center py-16 text-center sm:py-24">
-        {/* Badge */}
-        <div className="mb-6 inline-flex animate-fade-in items-center gap-2 rounded-full border border-border bg-accent-soft/50 px-4 py-1.5 text-xs text-accent">
-          <Sparkles className="h-3.5 w-3.5" />
-          Laptop buying made simple
-        </div>
-
-        {/* Headline */}
-        <h1
-          className="animate-slide-up max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl sm:leading-tight"
-          style={{ animationDelay: "0.1s" }}
-        >
-          Find the right laptop
-          <br />
-          <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
-            without learning every spec
-          </span>
-        </h1>
-
-        <p
-          className="animate-fade-in mt-4 max-w-xl text-lg leading-relaxed text-muted"
-          style={{ animationDelay: "0.2s" }}
-        >
-          Answer a few simple questions and get laptop recommendations based on
-          your budget, workload, and preferences.
-        </p>
-
-        {/* Two-pillar CTA cards */}
-        <div className="mt-10 grid w-full max-w-3xl gap-4 sm:grid-cols-2">
-          {/* Pillar 1: Quiz */}
-          <div
-            className="animate-slide-up group rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5"
-            style={{ animationDelay: "0.3s" }}
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <Sparkles className="h-6 w-6" />
+      <section className="relative w-full border-b border-border bg-gradient-to-b from-background to-card overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-24 lg:py-32 relative z-10">
+          <div className="max-w-4xl">
+            <div className="mb-6 inline-flex animate-fade-in items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent">
+              Precision Matching Engine
             </div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Your Perfect Match
-            </h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              Take our 3-minute quiz and get tailored laptop recommendations
-              matched to your budget and needs.
+            <h1
+              className="animate-fade-in text-5xl md:text-6xl lg:text-7xl font-bold tracking-[-0.02em] leading-[1.1] mb-8"
+              style={{ animationDelay: "0.1s" }}
+            >
+              Find the laptop that&apos;s <span className="text-accent">engineered</span> for you.
+            </h1>
+            <p
+              className="animate-fade-in text-lg md:text-xl text-muted mb-12 max-w-2xl leading-relaxed"
+              style={{ animationDelay: "0.2s" }}
+            >
+              Answer 3 simple questions. We parse thousands of specs to find your perfect match.
             </p>
-            <Link
-              href="/quiz"
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-all hover:gap-2.5"
-            >
-              Find My Laptop <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-
-          {/* Pillar 2: Browse */}
-          <div
-            className="animate-slide-up group rounded-2xl border border-border bg-card p-6 text-left shadow-sm transition hover:border-foreground/15 hover:shadow-lg"
-            style={{ animationDelay: "0.4s" }}
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-card-hover text-foreground">
-              <Search className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground">
-              Explore the Catalog
-            </h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              Browse a curated database of laptops, filter by specs, and compare
-              models side by side.
-            </p>
-            <Link
-              href="/laptops"
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-all hover:gap-2.5"
-            >
-              Browse Laptops <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ───── Popular Use Cases ───── */}
-      <section className="mb-20">
-        <h2 className="animate-fade-in mb-2 text-center text-2xl font-semibold text-foreground">
-          Popular Use Cases
-        </h2>
-        <p
-          className="animate-fade-in mb-8 text-center text-sm text-muted"
-          style={{ animationDelay: "0.1s" }}
-        >
-          Not sure where to start? Pick your use case and we&apos;ll find the right
-          laptop for you.
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {useCases.map((item, i) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="animate-slide-up group rounded-xl border border-border bg-card p-5 transition hover:border-accent/30 hover:bg-card-hover"
-              style={{ animationDelay: `${0.1 + i * 0.06}s` }}
-            >
-              <item.icon className="mb-3 h-5 w-5 text-accent" />
-              <div className="text-sm font-medium text-foreground transition group-hover:text-accent">
-                {item.label}
-              </div>
-              <div className="mt-1 text-xs text-muted">{item.desc}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ───── How It Works ───── */}
-      <section id="how-it-works" className="mb-20">
-        <h2 className="animate-fade-in mb-2 text-center text-2xl font-semibold text-foreground">
-          How SpecWise Works
-        </h2>
-        <p
-          className="animate-fade-in mb-8 text-center text-sm text-muted"
-          style={{ animationDelay: "0.1s" }}
-        >
-          From quiz to compare in minutes.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f, i) => (
             <div
-              key={f.title}
-              className="animate-slide-up rounded-xl border border-border bg-card p-5 transition hover:border-accent/20 hover:shadow-sm"
-              style={{ animationDelay: `${0.1 + i * 0.08}s` }}
+              className="animate-fade-in flex flex-wrap items-center gap-4 mb-16"
+              style={{ animationDelay: "0.3s" }}
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft">
-                <f.icon className="h-5 w-5 text-accent" />
+              <Link href="/quiz">
+                <Button size="lg" className="gap-2 px-8 py-4 text-base">
+                  Start Quiz <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/laptops">
+                <Button variant="secondary" size="lg" className="px-8 py-4 text-base">
+                  Browse Catalog
+                </Button>
+              </Link>
+            </div>
+            <div
+              className="animate-fade-in flex flex-col md:flex-row md:items-center gap-4 md:gap-6 text-sm text-muted"
+              style={{ animationDelay: "0.35s" }}
+            >
+              <span>1,248 Laptops</span>
+              <span className="hidden md:inline text-border">•</span>
+              <span>12 Global Regions</span>
+              <span className="hidden md:inline text-border">•</span>
+              <span>85,000+ Price Points</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ───── Bento Grid ───── */}
+      <section className="py-24 mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="grid md:grid-cols-4 gap-6">
+          {bentoCards.map((card) => {
+            const Icon = card.icon
+            return (
+              <div
+                key={card.title}
+                className={`animate-fade-in ${card.colSpan} rounded-2xl border border-border bg-card p-8 transition hover:border-accent/30 hover:bg-card-hover`}
+                style={{ animationDelay: card.delay }}
+              >
+                <Icon className="h-8 w-8 text-accent mb-4" />
+                <h3 className="text-lg font-bold text-foreground mb-2">{card.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{card.desc}</p>
+                {card.stat && (
+                  <div className="mt-6 text-3xl font-bold text-accent">
+                    {card.stat.value}
+                    <span className="text-sm font-normal text-muted ml-1.5">{card.stat.label}</span>
+                  </div>
+                )}
               </div>
-              <h3 className="mb-1 text-sm font-semibold text-foreground">
-                {f.title}
-              </h3>
-              <p className="text-xs leading-relaxed text-muted">{f.desc}</p>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ───── Use Cases ───── */}
+      <section className="py-24 border-y border-border bg-card/30">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Popular Use Cases</h2>
+              <p className="text-sm text-muted mt-1">Optimized hardware profiles for every workflow.</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {useCases.map((item, i) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="animate-fade-in group rounded-xl border border-border bg-card p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/30 hover:bg-card-hover"
+                  style={{ animationDelay: `${0.1 + i * 0.06}s` }}
+                >
+                  <Icon className="h-5 w-5 text-accent mb-3" />
+                  <div className="text-sm font-semibold text-foreground mb-1 group-hover:text-accent transition-colors">
+                    {item.label}
+                  </div>
+                  <div className="text-xs text-muted leading-relaxed">{item.desc}</div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ───── Process ───── */}
+      <section className="py-24 mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="text-center mb-16">
+          <h2 className="text-2xl font-bold text-foreground">How It Works</h2>
+          <p className="text-sm text-muted mt-2">From needs to machine in 4 simple steps.</p>
+        </div>
+        <div className="grid md:grid-cols-4 gap-8 md:gap-12 relative">
+          <div className="absolute hidden md:block top-6 left-[12.5%] w-3/4 h-px bg-border" />
+          {steps.map((step, i) => (
+            <div
+              key={step.title}
+              className="animate-fade-in relative z-10 flex flex-col items-center text-center"
+              style={{ animationDelay: `${0.1 + i * 0.1}s` }}
+            >
+              <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mb-6">
+                <span className="text-accent font-bold text-sm">{i + 1}</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground mb-2">{step.title}</h4>
+              <p className="text-xs text-muted leading-relaxed max-w-[200px]">{step.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ───── Trust + Final CTA ───── */}
-      <section className="animate-fade-in relative mb-20 overflow-hidden rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
-        {/* Glow backdrop */}
-        <div className="pointer-events-none absolute -inset-x-20 -top-32 h-64 bg-gradient-radial from-accent/5 to-transparent blur-3xl" />
-
-        <div className="relative">
-          <h2 className="text-xl font-semibold text-foreground">
-            Recommendations you can trust
+      {/* ───── Final CTA ───── */}
+      <section className="py-32 border-t border-border">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center">
+          <h2 className="animate-fade-in text-3xl font-bold text-foreground mb-8">
+            Ready to find your perfect laptop?
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted">
-            Every recommendation includes a clear reason why it fits your needs
-            and what trade-offs exist. No hidden bias — just honest, spec-based
-            matching.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/quiz">
-              <Button size="lg" className="gap-2 text-base">
-                Find My Laptop <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/laptops">
-              <Button variant="outline" size="lg">
-                Browse All Laptops
-              </Button>
-            </Link>
+          <Link href="/quiz" className="animate-fade-in inline-block" style={{ animationDelay: "0.1s" }}>
+            <Button size="lg" className="gap-2 px-12 py-5 text-lg font-bold shadow-xl shadow-accent/10">
+              Find My Laptop <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div className="animate-fade-in mt-6 text-xs text-muted" style={{ animationDelay: "0.2s" }}>
+            No account required • Free to use • Updated daily
           </div>
         </div>
       </section>

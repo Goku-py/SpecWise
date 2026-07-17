@@ -49,7 +49,7 @@ export default function CategoryPage() {
         <h2 className="text-2xl font-semibold">Category not found</h2>
         <p className="mt-2 text-sm text-muted">We don&apos;t have recommendations for that category yet.</p>
         <Link href="/">
-          <button className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500">
+          <button className="mt-6 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90">
             Back home
           </button>
         </Link>

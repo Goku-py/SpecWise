@@ -23,7 +23,7 @@ export function ToggleActiveButton({ id, isActive }: ToggleActiveButtonProps) {
         })}
         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
           isActive
-            ? "bg-emerald-500/20 text-emerald-400"
+            ? "bg-accent/20 text-accent"
             : "bg-card text-muted"
         }`}
       >

@@ -41,8 +41,8 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
   return (
     <div>
       {/* Top Match */}
-      <Card className="relative overflow-hidden border-emerald-500/20 bg-gradient-to-br from-card to-card-hover p-6 sm:p-8">
-        <div className="absolute right-0 top-0 rounded-bl-2xl bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-400">
+      <Card className="relative overflow-hidden border-accent/20 bg-gradient-to-br from-card to-card-hover p-6 sm:p-8">
+        <div className="absolute right-0 top-0 rounded-bl-2xl bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent">
           Best Match
         </div>
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
@@ -96,12 +96,12 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
 
         {/* Match reasons */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 p-4">
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">Why this fits</h4>
+          <div className="rounded-lg border border-accent/10 bg-accent/5 p-4">
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent">Why this fits</h4>
             <ul className="space-y-1.5">
               {top.matchReasons.map((r, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                  <span className="mt-0.5 text-emerald-500">✓</span> {r}
+                  <span className="mt-0.5 text-accent">✓</span> {r}
                 </li>
               ))}
             </ul>
@@ -170,7 +170,7 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
 
                 {laptop.matchReasons.length > 0 && (
                   <div className="mb-3 rounded-md bg-card/50 p-2.5">
-                    <div className="mb-1 text-xs font-medium text-emerald-400">Why:</div>
+                    <div className="mb-1 text-xs font-medium text-accent">Why:</div>
                     <ul className="space-y-0.5">
                       {laptop.matchReasons.slice(0, 2).map((r, i) => (
                         <li key={i} className="text-xs text-muted">✓ {r}</li>
@@ -181,7 +181,7 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
 
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => toggleCompare(laptop.id)}
-                    className={cn(compareList.includes(laptop.id) && "border-emerald-500/50 text-emerald-400")}>
+                    className={cn(compareList.includes(laptop.id) && "border-accent/50 text-accent")}>
                     {compareList.includes(laptop.id) ? "Added to Compare" : "Compare"}
                   </Button>
                   {laptop.affiliateUrl && (

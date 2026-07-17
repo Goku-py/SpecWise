@@ -7,10 +7,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: "bg-emerald-600 text-white hover:bg-emerald-500 focus-visible:ring-emerald-500",
-  secondary: "bg-card text-foreground hover:bg-card-hover focus-visible:ring-zinc-500",
-  outline: "border border-border text-muted hover:bg-card-hover focus-visible:ring-zinc-500",
-  ghost: "text-muted hover:text-foreground hover:bg-card-hover focus-visible:ring-zinc-500",
+  primary: "bg-accent text-white hover:opacity-90 focus-visible:ring-ring",
+  secondary: "bg-secondary text-foreground hover:opacity-90 focus-visible:ring-ring",
+  outline: "border border-border text-muted hover:bg-card-hover focus-visible:ring-ring",
+  ghost: "text-muted hover:text-foreground hover:bg-card-hover focus-visible:ring-ring",
   danger: "bg-red-600 text-white hover:bg-red-500 focus-visible:ring-red-500",
 }
 

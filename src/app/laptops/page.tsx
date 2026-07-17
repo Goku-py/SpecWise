@@ -38,10 +38,10 @@ function LaptopCard({ laptop }: { laptop: LaptopResult }) {
   return (
     <Link
       href={`/laptops/${laptop.id}`}
-      className="group animate-fade-in block rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/30 hover:bg-card-hover hover:shadow-sm"
+      className="group animate-fade-in block rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/20 hover:bg-card-hover hover:shadow-lg"
     >
       {/* Image */}
-      <div className="mb-4 flex h-32 items-center justify-center rounded-lg bg-background/50">
+      <div className="mb-4 flex h-32 items-center justify-center rounded-xl border border-border/50 bg-background/50">
         <ProductImage
           src={laptop.imageUrl}
           alt={`${laptop.brand} ${laptop.model}`}
@@ -54,12 +54,12 @@ function LaptopCard({ laptop }: { laptop: LaptopResult }) {
       {/* Brand + Model */}
       <div className="mb-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-base font-semibold text-foreground">
             {laptop.brand} {laptop.model}
             {laptop.variant && <span className="text-muted"> ({laptop.variant})</span>}
           </h3>
           {laptop.isPopular && (
-            <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent">
+            <span className="shrink-0 rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
               Popular
             </span>
           )}
@@ -68,7 +68,7 @@ function LaptopCard({ laptop }: { laptop: LaptopResult }) {
       </div>
 
       {/* Key Specs */}
-      <div className="mb-3 grid grid-cols-2 gap-1.5 text-xs text-muted">
+      <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-muted">
         <div className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{laptop.cpuBrand} {laptop.cpuFamily}</span>
@@ -91,14 +91,12 @@ function LaptopCard({ laptop }: { laptop: LaptopResult }) {
       <div className="flex items-center justify-between border-t border-border pt-3">
         <div>
           {laptop.price != null ? (
-            <span className="text-base font-bold text-foreground">
-              {formatPrice(laptop.price, laptop.currency)}
-            </span>
+            <span className="text-lg font-bold text-foreground">{formatPrice(laptop.price, laptop.currency)}</span>
           ) : (
             <span className="text-xs text-muted">Price unavailable</span>
           )}
         </div>
-        <ChevronRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5" />
+        <ChevronRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-1" />
       </div>
     </Link>
   )
@@ -107,7 +105,7 @@ function LaptopCard({ laptop }: { laptop: LaptopResult }) {
 function SkeletonCard() {
   return (
     <div className="animate-pulse rounded-xl border border-border bg-card p-5">
-      <div className="mb-4 h-32 rounded-lg bg-card-hover" />
+      <div className="mb-4 h-32 rounded-xl bg-card-hover" />
       <div className="mb-3 space-y-2">
         <div className="h-4 w-3/4 rounded bg-card-hover" />
         <div className="h-3 w-1/2 rounded bg-card-hover" />
@@ -132,6 +130,23 @@ export default function LaptopsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Keyboard shortcut: "/" focuses search
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   const search = useCallback(async (q: string, regionCode: string) => {
     setLoading(true)
@@ -167,33 +182,57 @@ export default function LaptopsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      {/* Breadcrumb */}
+      <nav className="mb-4 text-xs text-muted">
+        <Link href="/" className="transition-colors hover:text-foreground">
+          Home
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="text-foreground">Catalog</span>
+      </nav>
+
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Browse Laptops</h1>
         <p className="mt-1 text-sm text-muted">
-          Search by brand or model to find detailed specs and pricing.
+          {region.flag} Explore laptops available in{" "}
+          <span className="font-medium text-foreground">{region.label}</span> — search by brand or model to find
+          detailed specs and pricing.
         </p>
       </div>
 
       {/* Search bar */}
-      <div className="relative mb-8">
+      <div className="relative mb-6">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
         <input
+          ref={searchInputRef}
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search by brand or model…"
           autoFocus
           className={cn(
-            "w-full rounded-xl border border-border bg-background py-3.5 pl-12 pr-4 text-sm text-foreground",
+            "w-full rounded-xl border border-border bg-background py-3.5 pl-12 pr-20 text-sm text-foreground",
             "placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30",
             "transition-colors"
           )}
         />
+        {!query && !loading && (
+          <kbd className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-card-hover px-1.5 py-0.5 text-[10px] font-medium text-muted sm:inline-flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        )}
         {loading && (
           <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted" />
         )}
       </div>
+
+      {/* Stats line */}
+      {!loading && (
+        <p className="mb-4 text-xs text-muted">
+          {laptops.length === 1 ? "1 laptop found" : `${laptops.length} laptops found`}
+        </p>
+      )}
 
       {/* Results */}
       {loading ? (
@@ -209,10 +248,20 @@ export default function LaptopsPage() {
             {error ? "Something went wrong" : "No laptops found"}
           </h3>
           <p className="mt-1 text-sm text-muted">
-            {error || (query
-              ? `No results for "${query}". Try a different search term.`
-              : "No laptops in the catalog yet.")}
+            {error
+              ? "Failed to load laptops. Check your connection and try again."
+              : query
+                ? `No results for "${query}". Try a different search term.`
+                : "No laptops in the catalog yet."}
           </p>
+          {error && (
+            <button
+              onClick={() => search(query, region.code)}
+              className="mt-4 rounded-lg bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              Try again
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

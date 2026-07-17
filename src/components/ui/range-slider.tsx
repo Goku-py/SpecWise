@@ -116,7 +116,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
   const inputFieldClass =
     "w-full rounded-lg border bg-background px-3 py-2 text-center text-base font-semibold " +
     "text-foreground outline-none transition placeholder:text-muted " +
-    "focus:border-emerald-500/50"
+    "focus:border-accent/50"
 
   return (
     <>
