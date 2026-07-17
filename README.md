@@ -1,47 +1,27 @@
-# SpecWise — The Laptop That Fits *You*
+![SpecWise](./public/hero.svg)
 
-**Find the right laptop without learning a single spec.**
+**SpecWise** translates plain-English questions into weighted F-score rankings across 50+ laptop spec fields. Answer a quick quiz, get a match — no hardware terminology required.
 
-SpecWise translates what you *do* into what you *need*. Answer 8 simple questions about your workflow and budget. We parse 50+ spec fields across a curated database of 1,200+ models and rank every machine by how well it matches your life — so you buy with confidence, not confusion.
-
----
-
-## Why SpecWise?
-
-Buying a laptop shouldn't require a hardware engineering degree. Most advice is either brand-paid fluff or buried in spec sheets. SpecWise gives you honest, data-driven recommendations — no jargon, no bias, no affiliate markups.
-
-**3 minutes** → **8 questions** → **your perfect match.**
+Built with Next.js 16, Prisma 7, PostgreSQL, TypeScript.
 
 ---
 
-## What You Can Do
+## Features
 
-| Experience | What happens |
+| Path | What it does |
 |---|---|
-| **Guided Quiz** | Tell us about your work, preferences, and budget. We handle the rest. |
-| **Smart Matches** | Every result shows a match score, a plain-English explanation, and honest trade-offs. |
-| **Side-by-Side Compare** | Pit your top picks across 12 spec categories. See the winner at a glance. |
-| **Browse the Catalog** | Search 1,200+ models by brand, specs, or use case. Filtered by your region. |
-| **Pre-filtered Categories** | Gaming? Coding? Design? Instant picks for 10 use cases — no quiz needed. |
-| **Region-Aware Pricing** | Prices in your currency, from your local retailers. 6 regions supported. |
+| `/quiz` | Quick (8) or advanced (18) questions — region-aware budget, saved progress |
+| `/results` | Top match hero + alternatives grid with scores, reasoning, trade-offs |
+| `/compare?ids=...` | Side-by-side comparison across 12 spec categories |
+| `/laptops` | Debounced catalog search with live filtering |
+| `/laptops/[id]` | Full spec breakdown + retailer pricing |
+| `/category/[useCase]` | Pre-filtered for 10 use cases — no quiz needed |
+| `/admin` | Manage catalog listings, filter by region (secured via `ADMIN_API_KEY`) |
+| **Global** | Region-aware pricing (6 regions), dark/light mode, auto region detection |
 
 ---
 
-## How It's Built
-
-| Layer | Tech |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| UI | React 19, Tailwind CSS 4, Lucide icons, DM Sans |
-| Language | TypeScript 5 |
-| Database | PostgreSQL (Neon serverless) |
-| ORM | Prisma 7 |
-| Validation | Zod 4 |
-| Scoring | Weighted F-score across 10 hardware dimensions |
-
----
-
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/Goku-py/SpecWise
@@ -49,7 +29,7 @@ cd specwise
 npm install
 ```
 
-Copy `.env.example` → `.env`, set `DATABASE_URL`, then:
+Copy `.env.example` to `.env`. Only `DATABASE_URL` is required.
 
 ```bash
 npx prisma migrate deploy
@@ -57,7 +37,44 @@ npx tsx prisma/seed.ts
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — it's fully functional with seeded data.
+Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Stack
+
+| Layer | |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS 4, Lucide icons, DM Sans |
+| Language | TypeScript 5 |
+| Database | PostgreSQL (Neon / pg) |
+| ORM | Prisma 7 |
+| Validation | Zod 4 |
+
+---
+
+## Architecture
+
+**Scoring engine** — 7-stage filter pipeline with progressive relaxation fallbacks, then F-score ranking across 10 weighted dimensions per use case.
+
+**Multi-region pricing** — 6 regions (US, IN, GB, DE, CA, AU) with exchange-rate-based price generation. Real data from PricesAPI overrides when available.
+
+**Data flow:**
+```
+Quiz → POST /api/quiz → validate → rate-limit → scoreLaptops() → filter → F-score rank → top 12 → localStorage
+```
+
+No auth, no sessions. Quiz state lives in localStorage.
+
+---
+
+## Scripts
+
+| Command | |
+|---|---|
+| `npm run db:seed` | Seed database from `data/laptops.json` |
+| `npx tsx src/lib/scoring.demo.ts` | Run scoring engine demo (5 laptops, 6 assertions) |
 
 ---
 
