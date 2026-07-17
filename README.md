@@ -1,8 +1,23 @@
 ![SpecWise](./public/hero.svg)
 
-**SpecWise** translates plain-English questions into weighted F-score rankings across 50+ laptop spec fields. Answer a quick quiz, get a match — no hardware terminology required.
+**SpecWise** — an open-source laptop recommendation engine that translates plain-English quiz answers into weighted F-score rankings across 50+ spec fields. Non-technical users find the right machine without learning hardware terminology.
 
 Built with Next.js 16, Prisma 7, PostgreSQL, TypeScript.
+
+---
+
+## Why this exists
+
+Buying a laptop means deciphering 50+ specs — TDP, refresh rates, panel types, VRAM, thermal design power, colour gamut coverage. Most people don't know what matters for their workload, and review sites optimise for affiliate commissions, not honest matching.
+
+SpecWise bridges that gap:
+
+1. User answers 8–18 plain-English questions (budget, use case, preferences)
+2. Answers pass through a **7-stage filter pipeline** with progressive relaxation fallbacks — if a filter eliminates everything, it loosens constraints
+3. Remaining laptops are ranked by a **weighted F-score** (precision × recall) across 10 dimensions, with per-use-case priority weights
+4. Results show match score, reasoning, and honest trade-offs
+
+No jargon, no manual spec comparison, no affiliate bias.
 
 ---
 
@@ -75,6 +90,19 @@ No auth, no sessions. Quiz state lives in localStorage.
 |---|---|
 | `npm run db:seed` | Seed database from `data/laptops.json` |
 | `npx tsx src/lib/scoring.demo.ts` | Run scoring engine demo (5 laptops, 6 assertions) |
+
+---
+
+## Project structure
+
+```
+src/
+├── app/              # Next.js App Router pages + API routes
+├── components/       # Quiz, results, layout, UI components
+├── lib/              # Core logic (scoring, questions, types, regions)
+├── scripts/          # Data fetching (TechSpecs, PricesAPI, images)
+└── prisma/           # Schema, migrations, seed
+```
 
 ---
 
