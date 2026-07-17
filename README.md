@@ -12,13 +12,6 @@ SpecWise bridges that gap:
 2. **7-stage filter pipeline** with progressive relaxation fallbacks — if a filter eliminates everything, it loosens constraints
 3. **Weighted F-score ranking** across 10 dimensions (CPU, GPU, RAM, storage, battery, portability, display, budget, upgradeability, build quality) with per-use-case priority weights
 4. **Results show match score, reasoning, and honest trade-offs** — no jargon, no manual spec comparison, no affiliate bias
-
-<p align="center">
-  <img src="./public/screenshots/home.png" alt="SpecWise Homepage" width="700" />
-  <br>
-  <em>Homepage — Bento grid layout with hero, features, use cases, and process steps</em>
-</p>
-
 ---
 
 ## Features
