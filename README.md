@@ -1,24 +1,10 @@
-![SpecWise](./public/hero.svg)
+Buying a laptop means deciphering 50+ specs — TDP, refresh rates, panel types, VRAM, thermal design power, colour gamut coverage. Most people don't know what matters for their workload, and review sites optimise for affiliate commissions, not honest matching.
 
-<p align="center">
-  <b>SpecWise</b> — an open-source laptop recommendation engine that translates plain-English quiz answers into weighted F-score rankings across 50+ spec fields.
-  <br>
-  <i>Non-technical users find the right machine without learning hardware terminology.</i>
-</p>
-
-<p align="center">
-  <a href="#why-this-exists">Why</a> •
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#stack">Stack</a>
-</p>
+**SpecWise** solves that. An open-source recommendation engine that translates plain-English quiz answers into weighted F-score rankings across a 50+ field spec database. Non-technical users find the right machine without learning hardware terminology.
 
 ---
 
 ## Why this exists
-
-Buying a laptop means deciphering 50+ specs — TDP, refresh rates, panel types, VRAM, thermal design power, colour gamut coverage. Most people don't know what matters for their workload, and review sites optimise for affiliate commissions, not honest matching.
 
 SpecWise bridges that gap:
 
@@ -48,46 +34,6 @@ SpecWise bridges that gap:
 | `/admin` | Manage catalog listings, filter by region (secured via `ADMIN_API_KEY`) |
 | **Global** | Region-aware pricing (6 regions), dark/light mode, auto region detection |
 
-### Quiz
-
-<p align="center">
-  <img src="./public/screenshots/quiz.png" alt="SpecWise Quiz" width="700" />
-  <br>
-  <em>Quiz flow — 8–18 plain-English questions with region-aware budget slider</em>
-</p>
-
-### Browse & Search
-
-<p align="center">
-  <img src="./public/screenshots/catalog.png" alt="SpecWise Laptop Catalog" width="700" />
-  <br>
-  <em>Laptop catalog with debounced search, spec cards, and live filtering</em>
-</p>
-
-### Laptop Detail
-
-<p align="center">
-  <img src="./public/screenshots/laptop-detail.png" alt="SpecWise Laptop Detail" width="700" />
-  <br>
-  <em>Full spec breakdown — CPU, GPU, RAM, storage, display, battery, ports, pricing</em>
-</p>
-
-### Compare
-
-<p align="center">
-  <img src="./public/screenshots/compare.png" alt="SpecWise Compare" width="700" />
-  <br>
-  <em>Side-by-side comparison across 12 spec categories with match badges</em>
-</p>
-
-### Use Case Pages
-
-<p align="center">
-  <img src="./public/screenshots/category.png" alt="SpecWise Category Page" width="700" />
-  <br>
-  <em>Pre-filtered laptop recommendations per use case — no quiz required</em>
-</p>
-
 ---
 
 ## Quick start
@@ -96,11 +42,7 @@ SpecWise bridges that gap:
 git clone https://github.com/Goku-py/SpecWise
 cd specwise
 npm install
-```
-
-Copy `.env.example` to `.env`. Only `DATABASE_URL` is required.
-
-```bash
+cp .env.example .env  # only DATABASE_URL is required
 npx prisma migrate deploy
 npx tsx prisma/seed.ts
 npm run dev
@@ -113,39 +55,14 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         User Quiz (8–18 questions)                    │
-│                  Budget • Use Case • Preferences • Region             │
-└──────────────────────────┬───────────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                        POST /api/quiz                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────┐  │
-│  │  Zod     │  │  Rate    │  │  Fetch   │  │ 7-Stage │  │ F-    │  │
-│  │ Validate │→│  Limit   │→│ Catalog │→│ Filter  │→│ Score  │  │
-│  │          │  │ (60/min) │  │ (cached) │  │ Pipeline│  │ Rank   │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └───────┘  │
-│                               │                          │           │
-│                               └──────────┬───────────────┘           │
-│                                          ▼                           │
-│                              ┌──────────────────────┐                │
-│                              │  Top 12 Results      │                │
-│                              │  → localStorage      │                │
-│                              │  → optional email     │                │
-│                              └──────────────────────┘                │
-└──────────────────────────────────────────────────────────────────────┘
-
-       Filter Pipeline (7 stages with progressive relaxation):
-       Budget → OS → CPU → RAM → Storage → GPU → Ports
-       ↓ if all eliminated, relax constraint and retry
-       Last resort: top 10 popular laptops within generous budget
-
-       F-score Ranking (10 dimensions × use-case weights):
-       CPU + GPU + RAM + Storage + Battery + Portability +
-       Display + Budget Fit + Upgradeability + Build Quality
-       → Weighted harmonic mean → sorted by score
+Quiz → POST /api/quiz → Zod validate → rate-limit → fetch catalog (cached)
+→ 7-stage filter pipeline (Budget/OS/CPU/RAM/Storage/GPU/Ports)
+   with progressive relaxation fallbacks
+→ F-score ranking across 10 weighted dimensions
+→ Top 12 results → localStorage + optional email
 ```
+
+6 regions (US, IN, GB, DE, CA, AU). Exchange-rate-based pricing. Real data from PricesAPI overrides when available.
 
 ---
 
@@ -160,27 +77,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | ORM | Prisma 7 |
 | Validation | Zod 4 |
 
-## Multi-region pricing
-
-6 regions (US, IN, GB, DE, CA, AU) with exchange-rate-based price generation. Real data from PricesAPI overrides when available.
-
-## Project structure
-
-```
-src/
-├── app/              # Next.js App Router pages + API routes
-├── components/       # Quiz, results, layout, UI components
-├── lib/              # Core logic (scoring, questions, types, regions)
-├── scripts/          # Data fetching (TechSpecs, PricesAPI, images)
-└── prisma/           # Schema, migrations, seed
-```
-
-## Scripts
-
-| Command | |
-|---|---|
-| `npm run db:seed` | Seed database from `data/laptops.json` |
-| `npx tsx src/lib/scoring.demo.ts` | Run scoring engine demo (5 laptops, 6 assertions) |
+---
 
 ## License
 
