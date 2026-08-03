@@ -1,0 +1,9 @@
+{
+  "$comment": "Vercel cron schedule for the price-sync endpoint. NOTE: vercel.json only activates on Vercel deploys — it has no effect in local dev (the route is still reachable manually). Daily run at 06:00 UTC; protect it with CRON_SECRET in production (see .env.example).",
+  "crons": [
+    {
+      "path": "/api/cron/update-prices",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

@@ -1,71 +1,43 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
-import { useRegion } from "@/components/region-context"
-import { fetchRecommendations } from "@/lib/api"
+import { notFound } from "next/navigation"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ResultsGrid } from "@/components/results/results-grid"
+import { getActiveCatalog, toScorable } from "@/lib/catalog-cache"
 import { USE_CASE_LABELS } from "@/lib/questions"
-import { defaultQuizAnswers, type QuizAnswers, type RecommendedLaptop } from "@/lib/types"
+import { getRegionFromCookies } from "@/lib/region"
+import { scoreLaptops } from "@/lib/scoring"
+import { defaultQuizAnswers, type QuizAnswers, type UseCase } from "@/lib/types"
 
-const VALID_USE_CASES = Object.keys(USE_CASE_LABELS)
+// Force dynamic: reads the region cookie for scoring and pricing.
+export const dynamic = "force-dynamic"
 
-export default function CategoryPage() {
-  const params = useParams<{ useCase: string }>()
-  const useCase = typeof params.useCase === "string" ? params.useCase : ""
-  const { region } = useRegion()
-  const isValid = VALID_USE_CASES.includes(useCase)
-  const [results, setResults] = useState<RecommendedLaptop[]>([])
-  const [loading, setLoading] = useState(isValid)
+type CategoryPageProps = { params: Promise<{ useCase: string }> }
 
-  useEffect(() => {
-    if (!isValid) return
-    const controller = new AbortController()
-    const answers: QuizAnswers = {
-      ...defaultQuizAnswers,
-      useCase: useCase as QuizAnswers["useCase"],
-      region: region.code,
-    }
-    setLoading(true)
-    fetchRecommendations(answers, controller.signal)
-      .then(r => {
-        if (controller.signal.aborted) return
-        setResults(r.results)
-        setLoading(false)
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return
-        setLoading(false)
-      })
-    return () => controller.abort()
-  }, [useCase, region.code, isValid])
-
-  if (!isValid) {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <h2 className="text-2xl font-semibold">Category not found</h2>
-        <p className="mt-2 text-sm text-muted">We don&apos;t have recommendations for that category yet.</p>
-        <Link href="/">
-          <button className="mt-6 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90">
-            Back home
-          </button>
-        </Link>
-      </div>
-    )
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+  const { useCase } = await params
+  if (!Object.hasOwn(USE_CASE_LABELS, useCase)) return { title: "Category not found" }
+  const label = USE_CASE_LABELS[useCase]
+  return {
+    title: `Best ${label} Laptops — SpecWise`,
+    description: `Top ${label.toLowerCase()} laptops ranked by our spec-matching engine. Compare specs and regional prices.`,
   }
+}
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" /> Finding laptops for you…
-      </div>
-    )
-  }
+export default async function CategoryPage({ params }: CategoryPageProps) {
+  const { useCase } = await params
+  // Valid slugs are the USE_CASE_LABELS keys (e.g. "coding"); "developer" is not.
+  if (!Object.hasOwn(USE_CASE_LABELS, useCase)) notFound()
 
-  const label = USE_CASE_LABELS[useCase] ?? useCase
+  // Same data pipeline as POST /api/quiz so recommendations are identical:
+  // catalog → scorable → scoreLaptops with default answers + use case.
+  const region = await getRegionFromCookies()
+  const rawCatalog = await getActiveCatalog(region.code)
+  const scorable = rawCatalog.map(l => toScorable(l, region.code))
+  const answers: QuizAnswers = { ...defaultQuizAnswers, useCase: useCase as UseCase, region: region.code }
+  const results = scoreLaptops(scorable, answers)
+
+  const label = USE_CASE_LABELS[useCase]
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">

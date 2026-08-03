@@ -25,7 +25,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   const [dark, setDark] = useState(true)
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"))
+    // Defer past the effect body so the state sync doesn't cascade a render
+    // inside the effect (react-hooks/set-state-in-effect).
+    const id = requestAnimationFrame(() => {
+      setDark(document.documentElement.classList.contains("dark"))
+    })
+    return () => cancelAnimationFrame(id)
   }, [])
 
   const toggle = () => {
@@ -40,7 +45,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
-        "rounded-lg p-2 text-muted transition hover:bg-card-hover hover:text-foreground",
+        "inline-flex size-11 items-center justify-center rounded-lg text-muted transition hover:bg-card-hover hover:text-foreground",
         className
       )}
     >

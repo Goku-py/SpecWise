@@ -1,81 +1,131 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import {
   ArrowLeft,
   Cpu,
   Monitor,
   MemoryStick,
-  HardDrive,
   Weight,
   Battery,
-  Wifi,
   Usb,
-  Shield,
-  Camera,
-  Keyboard,
   Star,
-  ExternalLink,
-  Loader2,
 } from "lucide-react"
-import { formatPrice } from "@/lib/utils"
-import { cn } from "@/lib/utils"
+import { prisma } from "@/lib/prisma"
+import { buildAffiliateUrl } from "@/lib/affiliate"
 import { ProductImage } from "@/components/ui/product-image"
+import {
+  DetailPriceLine,
+  DetailPricingTable,
+  type DetailPriceRow,
+} from "@/components/product/detail-pricing"
+import { getActiveCatalog, getLaptopById, getLaptopBySlug } from "@/lib/catalog-cache"
+import type { LaptopDetail, PriceEntry } from "@/lib/types"
 
-interface PriceEntry {
-  region: string
-  retailer: string
-  currency: string
-  price: number
-  url: string | null
-  affiliateUrl: string | null
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+
+export const dynamicParams = true
+
+// Force dynamic: the page passes all region prices to the client, which
+// filters by the region cookie client-side. Making this dynamic ensures
+// fresh server-rendered metadata and JSON-LD on every request.
+export const dynamic = "force-dynamic"
+
+export async function generateStaticParams() {
+  const catalog = await getActiveCatalog("US")
+  // Phase 2a: slugs are the URL identity. Fall back to the (encoded) legacy id
+  // only for rows whose slug hasn't been backfilled yet.
+  return catalog.map(l => ({ id: l.slug ?? l.id }))
 }
 
-interface LaptopDetail {
-  id: string
-  brand: string
-  model: string
-  variant: string | null
-  os: string
-  cpuBrand: string
-  cpuFamily: string
-  cpuGeneration: string | null
-  cpuCores: number | null
-  cpuBenchmark: number | null
-  gpuType: string
-  gpuModel: string | null
-  gpuVRAM: number | null
-  ramAmount: number
-  ramType: string | null
-  ramUpgradeable: boolean
-  storageAmount: number
-  storageType: string
-  storageExpandable: boolean
-  displaySize: number
-  displayResolution: string | null
-  displayRefreshRate: number
-  displayPanelType: string | null
-  displayBrightness: number | null
-  displayColorGamut: string | null
-  displayTouch: boolean
-  batteryCapacity: number | null
-  batteryLife: number | null
-  weight: number | null
-  buildMaterial: string | null
-  webcamQuality: string | null
-  ports: string[]
-  wireless: string | null
-  securityFeatures: string[]
-  keyboardBacklit: boolean
-  isTouchscreen: boolean
-  isRefurbished: boolean
-  isPopular: boolean
-  imageUrl: string | null
-  reviewScore: number | null
-  notes: string | null
-  prices: PriceEntry[]
+// Phase 2a: a URL segment may be a slug OR a legacy id (contains spaces, possibly
+// %20-encoded). Next.js passes the raw (still percent-encoded) segment, so decode
+// once, then look up by slug first and by legacy id second.
+async function resolveLaptop(rawSegment: string) {
+  const id = decodeURIComponent(rawSegment)
+  const bySlug = await getLaptopBySlug(id)
+  if (bySlug) return { laptop: bySlug, matchedLegacyId: false }
+  const byId = await getLaptopById(id)
+  return { laptop: byId, matchedLegacyId: true }
+}
+
+function specSummary(laptop: LaptopDetail): string {
+  const parts = [
+    laptop.displaySize ? `${laptop.displaySize}" display` : null,
+    laptop.displayResolution,
+    laptop.cpuFamily ? `${laptop.cpuBrand} ${laptop.cpuFamily}` : null,
+    laptop.ramAmount ? `${laptop.ramAmount} GB RAM` : null,
+    laptop.storageAmount ? `${laptop.storageAmount} GB ${laptop.storageType}` : null,
+  ]
+  return parts.filter(Boolean).join(", ")
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id: rawId } = await params
+  // Metadata for legacy-id hits renders fine without redirecting — the body of
+  // the page performs the 308 redirect to the slug URL.
+  const { laptop } = await resolveLaptop(rawId)
+  if (!laptop) return { title: "Laptop not found" }
+
+  const title = `${laptop.brand} ${laptop.model}${laptop.variant ? ` (${laptop.variant})` : ""}`
+  const specs = specSummary(laptop)
+
+  return {
+    title: `${title} — SpecWise`,
+    description: `${title} specs: ${specs}. Compare prices across retailers and find the best deal.`,
+  }
+}
+
+interface ProductJsonLd {
+  "@context": string
+  "@type": "Product"
+  name: string
+  sku: string
+  brand: { "@type": "Brand"; name: string }
+  description: string
+  url: string
+  image?: string
+  offers?: {
+    "@type": "Offer"
+    priceCurrency: string
+    price: number
+    availability: string
+  }
+}
+
+// Deterministic, region-agnostic (pages are statically rendered), so it must
+// not read the request cookie region — prices across all regions are considered.
+function buildProductJsonLd(laptop: LaptopDetail): ProductJsonLd {
+  const lowestPrice = laptop.prices.reduce<PriceEntry | null>(
+    (min, p) => (min === null || p.price < min.price ? p : min),
+    null
+  )
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${laptop.brand} ${laptop.model}${laptop.variant ? ` (${laptop.variant})` : ""}`,
+    sku: laptop.id,
+    brand: { "@type": "Brand", name: laptop.brand },
+    description: `Specs: ${specSummary(laptop)}.`,
+    // Phase 2a: canonical URL uses the slug (no encoding needed); fall back to
+    // the encoded legacy id only if the slug was never backfilled.
+    url: new URL(`/laptops/${laptop.slug ?? encodeURIComponent(laptop.id)}`, BASE_URL).toString(),
+    ...(laptop.imageUrl ? { image: laptop.imageUrl } : {}),
+    ...(lowestPrice
+      ? {
+          offers: {
+            "@type": "Offer",
+            priceCurrency: lowestPrice.currency,
+            price: lowestPrice.price,
+            availability: "https://schema.org/InStock",
+          },
+        }
+      : {}),
+  }
 }
 
 function SpecRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -99,85 +149,67 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.C
   )
 }
 
-function Skeleton() {
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-6 h-4 w-24 animate-pulse rounded bg-card-hover" />
-      <div className="mb-8 space-y-2">
-        <div className="h-8 w-2/3 animate-pulse rounded bg-card-hover" />
-        <div className="h-4 w-1/3 animate-pulse rounded bg-card-hover" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-48 animate-pulse rounded-xl border border-border bg-card p-5 sm:p-6">
-            <div className="mb-4 h-5 w-32 rounded bg-card-hover" />
-            <div className="space-y-2.5">
-              {Array.from({ length: 4 }).map((_, j) => (
-                <div key={j} className="h-3.5 w-full rounded bg-card-hover" />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+export default async function LaptopDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: rawId } = await params
+  const { laptop: raw, matchedLegacyId } = await resolveLaptop(rawId)
+  if (!raw) notFound()
+  // Legacy-id hit with a slug available: 308-permanent redirect to the new URL
+  // identity so search engines converge on one canonical URL (permanentRedirect
+  // serves HTTP 308 in Server Components).
+  if (matchedLegacyId && raw.slug) permanentRedirect(`/laptops/${raw.slug}`)
+  const laptop: LaptopDetail = raw
 
-export default function LaptopDetailPage() {
-  const params = useParams()
-  const id = params.id as string
-  const [laptop, setLaptop] = useState<LaptopDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function fetchLaptop() {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await fetch(`/api/laptops/${id}`)
-        if (!res.ok) {
-          if (res.status === 404) throw new Error("Laptop not found")
-          throw new Error("Failed to load laptop details")
-        }
-        const data = await res.json()
-        setLaptop(data.laptop ?? data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong")
-      } finally {
-        setLoading(false)
-      }
+  // Phase 2c: resolve each retailer row's purchase href server-side. Retailer
+  // master data is fetched once per render (6 rows, cheap); the href chain is
+  // affiliateUrl → per-retailer quirk → linkTemplate → url (all templates are
+  // NULL today, so rows without url/affiliateUrl resolve to null → no link,
+  // exactly as before). BuyButton renders nothing for null hrefs.
+  const retailerRefs = new Map<string, { code: string; linkTemplate: string | null }>()
+  const buyHrefs = new Map<string, string>()
+  if (laptop.prices.length > 0) {
+    const retailers = await prisma.retailer.findMany({
+      select: { code: true, name: true, linkTemplate: true },
+    })
+    for (const r of retailers) {
+      retailerRefs.set(r.name, r)
+      retailerRefs.set(r.code, r)
     }
-    fetchLaptop()
-  }, [id])
-
-  if (loading) return <Skeleton />
-
-  if (error || !laptop) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
-        <Monitor className="mx-auto mb-4 h-12 w-12 text-muted" />
-        <h2 className="text-xl font-semibold text-foreground">
-          {error ?? "Laptop not found"}
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          The laptop you&apos;re looking for doesn&apos;t exist or was removed.
-        </p>
-        <Link
-          href="/laptops"
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition hover:gap-2.5"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to browse
-        </Link>
-      </div>
-    )
+    for (const p of laptop.prices) {
+      const ref = retailerRefs.get(p.retailer)
+      const href = buildAffiliateUrl({
+        affiliateUrl: p.affiliateUrl,
+        linkTemplate: ref?.linkTemplate ?? null,
+        url: p.url,
+        retailer: ref?.code ?? null,
+        vars: { model: laptop.model },
+      })
+      if (href) buyHrefs.set(`${p.retailer}-${p.region}`, href)
+    }
   }
 
-  const minPrice = Math.min(...laptop.prices.map(p => p.price))
-  const maxPrice = Math.max(...laptop.prices.map(p => p.price))
+  // Region-aware pricing rows: the client DetailPricing components filter
+  // these by the visitor's region (cookie) and format every price in that
+  // region's currency — never a mix (Phase: region/currency consistency).
+  const priceRows: DetailPriceRow[] = laptop.prices.map(p => ({
+    retailer: p.retailer,
+    region: p.region,
+    currency: p.currency,
+    price: p.price,
+    url: p.url,
+    affiliateUrl: p.affiliateUrl,
+    href: buyHrefs.get(`${p.retailer}-${p.region}`) ?? null,
+  }))
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildProductJsonLd(laptop)) }}
+      />
       {/* Back link */}
       <Link
         href="/laptops"
@@ -210,27 +242,21 @@ export default function LaptopDetailPage() {
             )}
           </div>
         </div>
-        {/* Price range */}
-        {laptop.prices.length > 0 && (
-          <p className="mt-3 text-lg font-semibold text-foreground">
-            {minPrice === maxPrice
-              ? formatPrice(minPrice, laptop.prices[0].currency)
-              : `${formatPrice(minPrice, laptop.prices[0].currency)} – ${formatPrice(maxPrice, laptop.prices[laptop.prices.length - 1].currency)}`
-            }
-          </p>
-        )}
+        {/* Price range — always the selected region's currency */}
+        <DetailPriceLine rows={priceRows} />
         {laptop.isRefurbished && (
           <p className="mt-1 text-xs text-amber-500">Refurbished model</p>
         )}
       </div>
 
-      {/* Image */}
+      {/* Image — LCP element, so mark priority (never lazy) */}
       <div className="mb-8 flex items-center justify-center rounded-xl border border-border bg-card p-8">
         <ProductImage
           src={laptop.imageUrl}
           alt={`${laptop.brand} ${laptop.model}`}
           width={400}
           height={256}
+          priority
           className="max-h-64 object-contain"
         />
       </div>
@@ -271,7 +297,7 @@ export default function LaptopDetailPage() {
 
         {/* Display */}
         <Section title="Display" icon={Monitor}>
-          <SpecRow label="Size">{laptop.displaySize}"</SpecRow>
+          <SpecRow label="Size">{laptop.displaySize}{'"'}</SpecRow>
           {laptop.displayResolution && <SpecRow label="Resolution">{laptop.displayResolution}</SpecRow>}
           <SpecRow label="Refresh Rate">{laptop.displayRefreshRate} Hz</SpecRow>
           {laptop.displayPanelType && <SpecRow label="Panel Type">{laptop.displayPanelType}</SpecRow>}
@@ -306,45 +332,8 @@ export default function LaptopDetailPage() {
         </Section>
       </div>
 
-      {/* Pricing by retailer */}
-      {laptop.prices.length > 0 && (
-        <div className="mt-6 animate-fade-in rounded-xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Pricing by Retailer</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted">
-                  <th className="pb-2 pr-4 font-medium">Retailer</th>
-                  <th className="pb-2 pr-4 font-medium">Region</th>
-                  <th className="pb-2 pr-4 font-medium">Price</th>
-                  <th className="pb-2 pr-4 font-medium">Link</th>
-                </tr>
-              </thead>
-              <tbody>
-                {laptop.prices.map((p, i) => (
-                  <tr key={`${p.retailer}-${p.region}`} className={cn("border-b border-border last:border-0", i % 2 === 0 && "bg-background/30")}>
-                    <td className="py-2.5 pr-4 font-medium text-foreground">{p.retailer}</td>
-                    <td className="py-2.5 pr-4 text-muted">{p.region}</td>
-                    <td className="py-2.5 pr-4 font-semibold text-foreground">{formatPrice(p.price, p.currency)}</td>
-                    <td className="py-2.5">
-                      {(p.affiliateUrl || p.url) && (
-                        <a
-                          href={p.affiliateUrl ?? p.url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-accent transition hover:underline"
-                        >
-                          Buy <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Pricing by retailer — scoped to the visitor's selected region */}
+      <DetailPricingTable rows={priceRows} />
     </div>
   )
 }

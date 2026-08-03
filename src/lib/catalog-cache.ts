@@ -8,7 +8,7 @@ const CATALOG_CACHE_TTL_SECONDS = Number(process.env.CATALOG_CACHE_TTL_SECONDS ?
 
 async function fetchActiveCatalog(region: string) {
   return prisma.laptop.findMany({
-    where: { isActive: true },
+    where: { status: "active" },
     include: {
       prices: {
         where: { region },
@@ -31,6 +31,66 @@ async function fetchActiveCatalog(region: string) {
 export const getActiveCatalog = unstable_cache(
   fetchActiveCatalog,
   ["active-laptops-catalog"],
+  {
+    tags: [CATALOG_CACHE_TAG],
+    revalidate: CATALOG_CACHE_TTL_SECONDS,
+  }
+)
+
+async function fetchLaptopById(id: string) {
+  return prisma.laptop.findUnique({
+    where: { id },
+    include: {
+      prices: {
+        select: {
+          region: true,
+          retailer: true,
+          currency: true,
+          price: true,
+          url: true,
+          affiliateUrl: true,
+        },
+        orderBy: { price: "asc" },
+      },
+    },
+  })
+}
+
+// Same shape as GET /api/laptops/[id]. Shares the catalog tag so admin
+// toggle/seed invalidation busts detail pages too.
+export const getLaptopById = unstable_cache(
+  fetchLaptopById,
+  ["laptop-by-id"],
+  {
+    tags: [CATALOG_CACHE_TAG],
+    revalidate: CATALOG_CACHE_TTL_SECONDS,
+  }
+)
+
+async function fetchLaptopBySlug(slug: string) {
+  return prisma.laptop.findFirst({
+    where: { slug },
+    include: {
+      prices: {
+        select: {
+          region: true,
+          retailer: true,
+          currency: true,
+          price: true,
+          url: true,
+          affiliateUrl: true,
+        },
+        orderBy: { price: "asc" },
+      },
+    },
+  })
+}
+
+// Slug lookup for the SEO URL identity. Shares the same catalog tag + TTL as
+// getLaptopById so invalidation keeps both fresh.
+export const getLaptopBySlug = unstable_cache(
+  fetchLaptopBySlug,
+  ["laptop-by-slug"],
   {
     tags: [CATALOG_CACHE_TAG],
     revalidate: CATALOG_CACHE_TTL_SECONDS,
@@ -95,7 +155,9 @@ export function toScorable(l: CatalogEntry, region: string): ScorableLaptop {
     keyboardBacklit: l.keyboardBacklit,
     isTouchscreen: l.isTouchscreen,
     isRefurbished: l.isRefurbished,
-    isActive: l.isActive,
+    // Derived from status for scoring.ts compatibility (which filters on isActive
+    // and must not be touched in phase 2).
+    isActive: l.status === "active",
     isPopular: l.isPopular,
     imageUrl: l.imageUrl,
     reviewScore: l.reviewScore,

@@ -7,20 +7,22 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:generate-laptops": "npx tsx scripts/generate-laptops.ts",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:fetch-images": "npx tsx scripts/fetch-images.ts",
-    "db:seed-weights": "echo 'No-op: use-case weights not implemented'",
     "db:setup": "npm run db:generate-laptops && prisma migrate dev && npx tsx prisma/seed.ts"
   },
+  "engines": {
+    "node": ">=20.9"
+  },
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
@@ -33,6 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
@@ -43,6 +46,7 @@
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "tsx": "^4.23.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

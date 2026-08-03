@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent tooling + generated/artifact output — not part of the app:
+    ".opencode/**",
+    "src/generated/**",
+    "test-results/**",
+    "playwright-report/**",
+    "coverage/**",
   ]),
 ]);
 

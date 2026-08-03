@@ -5,10 +5,60 @@ import * as fs from "fs"
 import * as path from "path"
 import "dotenv/config"
 import { REGIONS } from "../src/lib/regions"
+import { slugify, uniqueSlug, deterministicLaptopId } from "../src/lib/slug"
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL! })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
+
+// ── Phase 2a/b: slugify + uniqueness ───────────────────────────────────────
+// Shared with the write layer (src/lib/slug.ts, imported by src/lib/db/catalog.ts)
+// so the seed and every runtime writer apply IDENTICAL slug rules. Slugs are NOT
+// unique in the DB (deliberate, low-risk choice — see schema.prisma comment);
+// uniqueness is enforced here in the write layer: on collision we append
+// -2, -3, ... until the slug is free. uniqueSlug() is pure — the caller records
+// the result in `used` so later collisions see it.
+
+// ── Phase 2a: Brand master data (upserted, idempotent) ─────────────────────
+const BRAND_NAMES = ["Acer", "Apple", "ASUS", "Dell", "HP", "Lenovo", "Microsoft", "MSI", "Razer", "Samsung"]
+
+async function upsertBrands(): Promise<Map<string, string>> {
+  // Map from brand display name -> Brand.id
+  const byName = new Map<string, string>()
+  for (const name of BRAND_NAMES) {
+    const brand = await prisma.brand.upsert({
+      where: { name },
+      update: { slug: slugify(name) },
+      create: { name, slug: slugify(name), logoUrl: null },
+    })
+    byName.set(name, brand.id)
+  }
+  return byName
+}
+
+// ── Phase 2a: Retailer master data ──────────────────────────────────────────
+// Exactly the retailer names used per region in src/lib/regions.ts. baseUrl is a
+// conservative home-domain default (Amazon uses the .com global storefront; the
+// regional storefronts live under the same brand). linkTemplate/affiliateProgram
+// intentionally left null — do NOT invent affiliate config.
+const RETAILERS = [
+  { code: "amazon", name: "Amazon", baseUrl: "https://www.amazon.com" },
+  { code: "best-buy", name: "Best Buy", baseUrl: "https://www.bestbuy.com" },
+  { code: "flipkart", name: "Flipkart", baseUrl: "https://www.flipkart.com" },
+  { code: "currys", name: "Currys", baseUrl: "https://www.currys.co.uk" },
+  { code: "mediamarkt", name: "MediaMarkt", baseUrl: "https://www.mediamarkt.de" },
+  { code: "jb-hi-fi", name: "JB Hi-Fi", baseUrl: "https://www.jbhifi.com.au" },
+]
+
+async function upsertRetailers() {
+  for (const r of RETAILERS) {
+    await prisma.retailer.upsert({
+      where: { code: r.code },
+      update: { name: r.name, baseUrl: r.baseUrl },
+      create: { ...r, linkTemplate: null, affiliateProgram: null, enabled: true },
+    })
+  }
+}
 
 // ponytail: one Amazon + one regional placeholder per region; 2nd retailer gets a small
 // price variance so the "best deal" pick is real. Swap names/affiliate links later.
@@ -49,6 +99,8 @@ interface SeedLaptop {
   weight?: number; buildMaterial?: string; webcamQuality?: string
   ports: string[]; wireless?: string; securityFeatures: string[]
   keyboardBacklit: boolean; isTouchscreen: boolean; isRefurbished?: boolean
+  // Legacy field, kept for data-file compat: isActive=false maps to status='archived',
+  // anything else (incl. undefined) maps to status='active' (phase 2a).
   isActive?: boolean; isPopular: boolean; imageUrl?: string; reviewScore?: number; notes?: string
   /** Real regional prices from PricesAPI (fetched by scripts/fetch-laptops.ts) */
   pricesOverride?: Array<{
@@ -57,24 +109,42 @@ interface SeedLaptop {
   [key: string]: unknown
 }
 
-async function seedLaptops() {
+async function seedLaptops(brandIds: Map<string, string>) {
   const filePath = path.join(__dirname, "..", "data", "laptops.json")
   const raw = fs.readFileSync(filePath, "utf-8")
   const laptops: SeedLaptop[] = JSON.parse(raw)
 
   console.log(`Seeding ${laptops.length} laptops with regional prices...`)
 
+  const usedSlugs = new Set<string>()
   for (const lap of laptops) {
-    const id = `${lap.brand}-${lap.model}-${(lap.variant || "").replace(/\s+/g, "-")}-${lap.region}`
+    // Deterministic ID: Brand-Model-Variant (variant optional). The data file has no
+    // per-laptop region field — region used to be interpolated here, yielding "-undefined"
+    // suffixes that broke URLs/canonicals. IDs stay as the legacy identity; slugs are
+    // now the URL identity (phase 2a).
+    const id = deterministicLaptopId(lap.brand, lap.model, lap.variant)
+
+    const slug = uniqueSlug(
+      slugify(`${lap.brand}-${lap.model}-${lap.variant || ""}`),
+      usedSlugs
+    )
+    usedSlugs.add(slug)
+    // Legacy isActive field (if ever present in data) maps to status; default active.
+    const status = lap.isActive === false ? "archived" : "active"
 
     await prisma.laptop.upsert({
       where: { id },
       update: {
+        slug,
+        brandId: brandIds.get(lap.brand) ?? null,
         isPopular: lap.isPopular,
         notes: lap.notes || null,
       },
       create: {
         id,
+        slug,
+        brandId: brandIds.get(lap.brand) ?? null,
+        status,
         brand: lap.brand,
         model: lap.model,
         variant: lap.variant || null,
@@ -169,7 +239,7 @@ async function fetchUnsplashImages() {
     try {
       const res = await fetch(url, { headers: { Authorization: `Client-ID ${apiKey}` } })
       if (!res.ok) { console.warn(`  HTTP ${res.status} for ${l.brand} ${l.model}`); continue }
-      const data: any = await res.json()
+      const data = (await res.json()) as { results?: Array<{ urls: { small: string } }> }
       if (!data.results?.length) { console.warn(`  No results for ${l.brand} ${l.model}`); continue }
       const imgUrl = data.results[0].urls.small
       await prisma.laptop.update({ where: { id: l.id }, data: { imageUrl: imgUrl } })
@@ -187,7 +257,7 @@ async function main() {
   await prisma.laptopPrice.deleteMany()
   await prisma.laptop.deleteMany()
 
-  await seedLaptops()
+  await upsertBrands().then(brands => upsertRetailers().then(() => seedLaptops(brands)))
   await invalidateCatalogCacheAfterSeed()
   console.log()
   await fetchUnsplashImages()

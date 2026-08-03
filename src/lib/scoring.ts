@@ -289,7 +289,7 @@ export function scoreLaptops(
       ? DIMS.reduce((sum, d) => sum + (answeredDims.has(d) ? (profile[d] ?? 0) * scores[d] : 0), 0) / requestedWeight
       : precision
 
-    const alpha = 0.5 // ponytail: emphasize recall (user's explicit prefs matter more)
+    const alpha = 0.5 // ponytail: alpha < 1 weights precision over recall (use-case fit dominates explicit prefs)
     const fScore = precision + recall > 0
       ? (1 + alpha * alpha) * precision * recall / (alpha * alpha * precision + recall)
       : 0

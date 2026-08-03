@@ -75,6 +75,93 @@ export interface RetailerPrice {
   affiliateUrl: string | null
 }
 
+// Catalog card DTO — shared by the server-rendered /laptops grid and the
+// /api/laptops/search response (same field shape).
+export interface CatalogLaptop {
+  id: string
+  // Slug is the preferred URL identity (phase 2a); null until backfilled by seed.
+  slug: string | null
+  brand: string
+  model: string
+  variant: string | null
+  os: string
+  cpuBrand: string
+  cpuFamily: string
+  cpuCores: number | null
+  gpuType: string
+  gpuModel: string | null
+  ramAmount: number
+  storageAmount: number
+  storageType: string
+  displaySize: number
+  displayResolution: string | null
+  displayRefreshRate: number
+  weight: number | null
+  batteryLife: number | null
+  imageUrl: string | null
+  reviewScore: number | null
+  isPopular: boolean
+  price: number | null
+  currency: string
+}
+
+// Retailer price row on the laptop detail page (all regions, sorted by price).
+export interface PriceEntry {
+  region: string
+  retailer: string
+  currency: string
+  price: number
+  url: string | null
+  affiliateUrl: string | null
+}
+
+// Full laptop detail DTO — rendered by the server component at /laptops/[id].
+export interface LaptopDetail {
+  id: string
+  slug: string | null
+  brand: string
+  model: string
+  variant: string | null
+  os: string
+  cpuBrand: string
+  cpuFamily: string
+  cpuGeneration: string | null
+  cpuCores: number | null
+  cpuBenchmark: number | null
+  gpuType: string
+  gpuModel: string | null
+  gpuVRAM: number | null
+  ramAmount: number
+  ramType: string | null
+  ramUpgradeable: boolean
+  storageAmount: number
+  storageType: string
+  storageExpandable: boolean
+  displaySize: number
+  displayResolution: string | null
+  displayRefreshRate: number
+  displayPanelType: string | null
+  displayBrightness: number | null
+  displayColorGamut: string | null
+  displayTouch: boolean
+  batteryCapacity: number | null
+  batteryLife: number | null
+  weight: number | null
+  buildMaterial: string | null
+  webcamQuality: string | null
+  ports: string[]
+  wireless: string | null
+  securityFeatures: string[]
+  keyboardBacklit: boolean
+  isTouchscreen: boolean
+  isRefurbished: boolean
+  isPopular: boolean
+  imageUrl: string | null
+  reviewScore: number | null
+  notes: string | null
+  prices: PriceEntry[]
+}
+
 export interface RecommendedLaptop {
   id: string
   brand: string
@@ -155,6 +242,8 @@ export interface ScorableLaptop {
   keyboardBacklit: boolean
   isTouchscreen: boolean
   isRefurbished: boolean
+  // Derived in toScorable() from status === "active" — kept for scoring.ts,
+  // which filters on this field and is out of scope for phase 2.
   isActive: boolean
   isPopular: boolean
   imageUrl: string | null

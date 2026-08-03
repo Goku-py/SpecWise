@@ -1,7 +1,9 @@
 import { cookies } from "next/headers"
+import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { REGIONS } from "@/lib/regions"
-import { ToggleActiveButton } from "./toggle-button"
+import { buttonVariants } from "@/components/ui/button"
+import { ToggleStatusButton } from "./toggle-button"
 import { LoginForm, LogoutButton } from "./login-form"
 
 export const dynamic = "force-dynamic"
@@ -17,7 +19,7 @@ interface LaptopRow {
   cpuFamily: string
   ramAmount: number
   storageAmount: number
-  isActive: boolean
+  status: string
 }
 
 interface AdminPageProps {
@@ -65,7 +67,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         cpuFamily: l.cpuFamily,
         ramAmount: l.ramAmount,
         storageAmount: l.storageAmount,
-        isActive: l.isActive,
+        status: l.status,
       }
     })
     total = laptopCount
@@ -86,7 +88,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </div>
           <p className="text-sm text-muted">{total} laptops</p>
         </div>
-        <form action="/admin" method="GET" className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/laptops/new"
+            className={buttonVariants({ variant: "primary", size: "sm" })}
+          >
+            Add laptop
+          </Link>
+          <form action="/admin" method="GET" className="flex items-center gap-2">
           <label htmlFor="region" className="text-sm text-muted">Region:</label>
           <select
             id="region"
@@ -106,7 +115,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           >
             Apply
           </button>
-        </form>
+          </form>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -122,7 +132,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <th className="px-4 py-3 font-medium text-muted">CPU</th>
               <th className="px-4 py-3 font-medium text-muted">RAM</th>
               <th className="px-4 py-3 font-medium text-muted">Storage</th>
-              <th className="px-4 py-3 font-medium text-muted">Active</th>
+              <th className="px-4 py-3 font-medium text-muted">Status</th>
+              <th className="px-4 py-3 font-medium text-muted" aria-label="Actions"></th>
             </tr>
           </thead>
           <tbody>
@@ -138,7 +149,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <td className="px-4 py-3 text-foreground">{l.ramAmount} GB</td>
                 <td className="px-4 py-3 text-foreground">{l.storageAmount} GB</td>
                 <td className="px-4 py-3">
-                  <ToggleActiveButton id={l.id} isActive={l.isActive} />
+                  <ToggleStatusButton id={l.id} status={l.status} />
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/admin/laptops/${encodeURIComponent(l.id)}/edit`}
+                    className="text-xs font-medium text-accent transition hover:underline"
+                  >
+                    Edit
+                  </Link>
                 </td>
               </tr>
             ))}

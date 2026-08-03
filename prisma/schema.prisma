@@ -7,6 +7,15 @@ datasource db {
   provider = "postgresql"
 }
 
+// Status replaces the old boolean isActive flag (phase2):
+//   isActive=true  → status='active'
+//   isActive=false → status='archived'
+enum Status {
+  draft
+  active
+  archived
+}
+
 model Laptop {
   id                String   @id @default(cuid())
   brand             String
@@ -45,7 +54,15 @@ model Laptop {
   keyboardBacklit   Boolean  @default(false)
   isTouchscreen     Boolean  @default(false)
   isRefurbished     Boolean  @default(false)
-  isActive          Boolean  @default(true)
+  // slug is the new URL identity (SEO-friendly, stable). The DB column is
+  // intentionally NON-unique and nullable to keep migration risk low — uniqueness
+  // is enforced in application code (seed + future write layer) via slugify +
+  // collision suffixes. Backfill happens in the seed, not in SQL.
+  slug              String?
+  // Optional FK to Brand. Kept nullable + no required relation constraint so the
+  // existing `brand String` display field can stay untouched (40+ consumers).
+  brandId           String?
+  status            Status   @default(active)
   isPopular         Boolean  @default(false)
   imageUrl          String?
   reviewScore       Float?
@@ -54,8 +71,12 @@ model Laptop {
   updatedAt         DateTime @updatedAt
 
   prices         LaptopPrice[]
+  priceSnapshots PriceSnapshot[]
 
-  @@index([isActive, createdAt(sort: Desc)])
+  brandRef Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([slug])
 }
 
 model LaptopPrice {
@@ -63,6 +84,10 @@ model LaptopPrice {
   region           String
   retailer         String   @default("default")
   currency         String
+  // price is in WHOLE currency units (major units), NOT cents — e.g. 1099 means
+  // $1,099.00 (see data/laptops.json: price: 1099 for a ~$1099 laptop). This is
+  // deliberately different from PriceSnapshot.priceCents (minor units). Do not
+  // change semantics without a migration + formatPrice() audit.
   price            Int
   url              String?
   affiliateUrl     String?
@@ -99,4 +124,45 @@ model Lead {
   createdAt DateTime @default(now())
 
   @@unique([email, region])
+}
+
+// phase2: brand master data. Laptop.brandId is optional — legacy rows keep the
+// denormalized `brand` string on Laptop until they are linked via the seed.
+model Brand {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  slug    String   @unique
+  logoUrl String?
+
+  laptops Laptop[]
+}
+
+// phase2: retailer master data. `code` is the stable slug-style identifier used
+// by LaptopPrice.retailer / PriceSnapshot.retailer; `name` is the display label.
+model Retailer {
+  id               String   @id @default(cuid())
+  code             String   @unique
+  name             String
+  baseUrl          String
+  linkTemplate     String?
+  affiliateProgram String?
+  enabled          Boolean  @default(true)
+}
+
+// phase2: time-series price snapshots for future price-history charts.
+// priceCents is in MINOR units (cents) — unlike LaptopPrice.price (major units).
+model PriceSnapshot {
+  id         String   @id @default(cuid())
+  laptopId   String
+  retailer   String
+  region     String
+  priceCents Int
+  currency   String
+  inStock    Boolean  @default(true)
+  capturedAt DateTime @default(now())
+
+  laptop Laptop @relation(fields: [laptopId], references: [id], onDelete: Cascade)
+
+  @@index([laptopId, capturedAt])
+  @@unique([laptopId, retailer, region, capturedAt])
 }

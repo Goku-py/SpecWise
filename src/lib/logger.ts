@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 
-export function withLogging(
-  handler: (req: Request, rid: string, ...args: any[]) => Promise<Response>
-): (req: Request, ...args: any[]) => Promise<Response> {
+export function withLogging<A extends unknown[]>(
+  handler: (req: Request, rid: string, ...args: A) => Promise<Response>
+): (req: Request, ...args: A) => Promise<Response> {
   return async (req, ...args) => {
     const rid = crypto.randomUUID()
     const start = performance.now()

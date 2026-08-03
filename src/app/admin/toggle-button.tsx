@@ -1,16 +1,17 @@
 "use client"
 
 import { useTransition, useState } from "react"
-import { toggleLaptopActive } from "./actions"
+import { toggleLaptopStatus } from "./actions"
 
-interface ToggleActiveButtonProps {
+interface ToggleStatusButtonProps {
   id: string
-  isActive: boolean
+  status: string
 }
 
-export function ToggleActiveButton({ id, isActive }: ToggleActiveButtonProps) {
+export function ToggleStatusButton({ id, status }: ToggleStatusButtonProps) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
+  const active = status === "active"
 
   return (
     <div>
@@ -18,16 +19,16 @@ export function ToggleActiveButton({ id, isActive }: ToggleActiveButtonProps) {
         disabled={pending}
         onClick={() => startTransition(async () => {
           setError("")
-          const result = await toggleLaptopActive(id, isActive)
+          const result = await toggleLaptopStatus(id, status)
           if (!result.ok) setError(result.error ?? "Failed")
         })}
         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-          isActive
+          active
             ? "bg-accent/20 text-accent"
             : "bg-card text-muted"
         }`}
       >
-        {pending ? "..." : isActive ? "Active" : "Inactive"}
+        {pending ? "..." : active ? "Active" : "Archived"}
       </button>
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
     </div>

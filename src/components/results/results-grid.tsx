@@ -6,8 +6,9 @@ import {
   ExternalLink, BarChart3,
   Cpu, Cpu as Gpu, MemoryStick as Memory, HardDrive, Monitor, BatteryFull,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BuyButton } from "@/components/product/buy-button"
 import { MatchBadge } from "@/components/ui/progress"
 import { ProductImage } from "@/components/ui/product-image"
 import { formatPrice, cn } from "@/lib/utils"
@@ -29,8 +30,8 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
         <p className="mt-2 text-sm text-muted">
           Try adjusting your criteria or broadening your budget.
         </p>
-        <Link href="/quiz">
-          <Button className="mt-6">Try Again</Button>
+        <Link href="/quiz" className={buttonVariants({ className: "mt-6" })}>
+          Try Again
         </Link>
       </div>
     )
@@ -83,13 +84,16 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
               >
                 {compareList.includes(top.id) ? "Added" : "Compare"}
               </Button>
-              {top.affiliateUrl && (
-                <a href={top.affiliateUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" className="gap-2">
+              <BuyButton
+                href={top.affiliateUrl ?? top.url}
+                size="sm"
+                className="gap-2"
+                label={
+                  <>
                     View Deal <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </a>
-              )}
+                  </>
+                }
+              />
             </div>
           </div>
         </div>
@@ -184,13 +188,17 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
                     className={cn(compareList.includes(laptop.id) && "border-accent/50 text-accent")}>
                     {compareList.includes(laptop.id) ? "Added to Compare" : "Compare"}
                   </Button>
-                  {laptop.affiliateUrl && (
-                    <a href={laptop.affiliateUrl} target="_blank" rel="noopener noreferrer" className="ml-auto">
-                      <Button size="sm" variant="ghost" className="gap-1">
+                  <BuyButton
+                    href={laptop.affiliateUrl ?? laptop.url}
+                    size="sm"
+                    variant="ghost"
+                    className="ml-auto gap-1"
+                    label={
+                      <>
                         View <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    </a>
-                  )}
+                      </>
+                    }
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -208,10 +216,9 @@ export function ResultsGrid({ results }: { results: RecommendedLaptop[] }) {
             </span>
             <Link
               href={`/compare?ids=${compareList.join(",")}`}
+              className={buttonVariants({ className: "gap-2" })}
             >
-              <Button className="gap-2">
-                Compare Now <BarChart3 className="h-4 w-4" />
-              </Button>
+              Compare Now <BarChart3 className="h-4 w-4" />
             </Link>
           </div>
         </div>

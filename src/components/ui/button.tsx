@@ -6,6 +6,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md" | "lg"
 }
 
+const buttonBase =
+  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background " +
+  "disabled:pointer-events-none disabled:opacity-50"
+
 const variants = {
   primary: "bg-accent text-white hover:opacity-90 focus-visible:ring-ring",
   secondary: "bg-secondary text-foreground hover:opacity-90 focus-visible:ring-ring",
@@ -20,20 +25,29 @@ const sizes = {
   lg: "h-12 px-6 text-base",
 }
 
+/**
+ * Shared class builder so <Link>/<a> elements can be styled exactly like a
+ * Button without nesting an interactive element inside another.
+ */
+export function buttonVariants({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonProps["variant"]
+  size?: ButtonProps["size"]
+  className?: string
+} = {}) {
+  return cn(buttonBase, variants[variant], sizes[size], className)
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", disabled, children, ...props }, ref) => {
     return (
       <button
         ref={ref}
         disabled={disabled}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          "disabled:pointer-events-none disabled:opacity-50",
-          variants[variant],
-          sizes[size],
-          className
-        )}
+        className={buttonVariants({ variant, size, className })}
         {...props}
       >
         {children}

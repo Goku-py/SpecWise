@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server"
 import { withLogging } from "@/lib/logger"
 import { prisma } from "@/lib/prisma"
+import { getClientIP, checkRateLimit } from "@/lib/rate-limit"
 
 export const GET = withLogging(async (request) => {
+  // Public, per-keystroke DB queries — cap at 60 requests/minute/IP (same as /api/quiz)
+  const ip = getClientIP(request)
+  const rateLimit = await checkRateLimit(`search-laptops:${ip}`, 60, 60)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": "60" } }
+    )
+  }
+
   const { searchParams } = new URL(request.url)
   const q = searchParams.get("q")?.trim()
   const region = searchParams.get("region")?.trim() || undefined
 
   const laptops = await prisma.laptop.findMany({
     where: {
-      isActive: true,
+      status: "active",
       ...(q && q.length >= 2
         ? {
             OR: [
@@ -32,6 +43,7 @@ export const GET = withLogging(async (request) => {
 
   const enriched = laptops.map(l => ({
     id: l.id,
+    slug: l.slug,
     brand: l.brand,
     model: l.model,
     variant: l.variant,

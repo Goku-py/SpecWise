@@ -21,7 +21,7 @@ export function Progress({ value, max = 100, className }: ProgressProps) {
 export function MatchBadge({ score }: { score: number }) {
   const color =
     score >= 85 ? "bg-accent/20 text-accent border-accent/30"
-    : score >= 70 ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+    : score >= 70 ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-300"
     : score >= 50 ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
     : "bg-muted/20 text-muted border-muted/30"
 

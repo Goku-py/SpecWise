@@ -40,6 +40,17 @@ export async function checkRateLimit(
       windowTs
     )
     const count = result[0]?.count ?? 1
+
+    // Opportunistic cleanup: the table otherwise grows ~86K rows/day with no TTL.
+    // ~1 in 50 calls prunes rows older than 24h; failures are non-fatal.
+    if (Math.random() < 0.02) {
+      try {
+        await prisma.$executeRaw`DELETE FROM "RateLimit" WHERE "updatedAt" < now() - interval '1 day'`
+      } catch (error) {
+        console.error("Rate limit cleanup error (non-fatal):", error)
+      }
+    }
+
     return {
       allowed: count <= limit,
       remaining: Math.max(0, limit - count),

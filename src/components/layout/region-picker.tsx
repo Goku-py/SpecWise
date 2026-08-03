@@ -1,18 +1,45 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { CURRENCIES } from "@/lib/utils"
-import { REGIONS } from "@/lib/regions"
-import { useRegion } from "../region-context"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { CURRENCIES, cn } from "@/lib/utils"
+import { REGIONS, type RegionConfig } from "@/lib/regions"
+import { useClientRegion, setClientRegion } from "@/lib/region-store"
 
-export function RegionPicker() {
-  const { region, setRegion } = useRegion()
+/**
+ * Region selector. The displayed region comes from the client region store
+ * (server-rendered value until hydration, live value afterwards), so desktop
+ * and mobile instances stay in sync and every price on the page updates the
+ * moment a region is picked.
+ *
+ * Geo-detection is handled server-side by src/middleware.ts (x-vercel-ip-country
+ * header) — the old client-side ipapi.co fetch was blocked by the CSP and
+ * silently fell back to US on every device that had no cookie.
+ */
+export function RegionPicker({
+  currentRegion,
+  placement = "bottom",
+}: {
+  currentRegion: RegionConfig
+  placement?: "top" | "bottom"
+}) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const listRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const selected = REGIONS.find(r => r.code === region.code) || REGIONS[0]
-  const currency = CURRENCIES.find(c => (c.countries as readonly string[]).includes(region.code))
+  // Pre-hydration: server prop. Post-hydration: live store value (cookie).
+  const selected = useClientRegion(currentRegion)
+  const currency = CURRENCIES.find(c => (c.countries as readonly string[]).includes(selected.code))
+
+  function select(code: string) {
+    setOpen(false)
+    // Optimistic: every subscriber (pickers, detail pricing) re-renders now.
+    void setClientRegion(code)
+    // Server-rendered region data (catalog grid, quiz, results) catches up.
+    router.refresh()
+  }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
@@ -34,8 +61,6 @@ export function RegionPicker() {
       )
     }
   }
-
-  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -65,9 +90,9 @@ export function RegionPicker() {
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="Select region"
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-card hover:text-foreground"
+        className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-card hover:text-foreground"
       >
-        <span>{selected.flag}</span>
+        <span aria-hidden="true">{selected.flag}</span>
         <span>{selected.code}</span>
         {currency && <span className="text-muted">({currency.symbol})</span>}
       </button>
@@ -76,26 +101,26 @@ export function RegionPicker() {
           ref={listRef}
           role="listbox"
           aria-label="Available regions"
-          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-card p-1 shadow-xl"
+          className={cn(
+            "absolute right-0 z-50 w-48 rounded-xl border border-border bg-card p-1 shadow-xl",
+            placement === "top" ? "bottom-full mb-1" : "top-full mt-1"
+          )}
         >
           {REGIONS.map((r, i) => (
             <button
               key={r.code}
               role="option"
-              aria-selected={region.code === r.code}
+              aria-selected={selected.code === r.code}
               tabIndex={-1}
               data-index={i}
-              onClick={() => {
-                setRegion(r.code)
-                setOpen(false)
-              }}
+              onClick={() => select(r.code)}
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
-                region.code === r.code
+                selected.code === r.code
                   ? "bg-accent/10 text-accent"
                   : "text-muted hover:bg-card-hover hover:text-foreground"
               }`}
             >
-              <span>{r.flag}</span>
+              <span aria-hidden="true">{r.flag}</span>
               <span>{r.label}</span>
             </button>
           ))}

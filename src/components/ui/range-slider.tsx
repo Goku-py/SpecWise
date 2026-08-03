@@ -23,23 +23,14 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
   const [minErr, setMinErr] = useState("")
   const [maxErr, setMaxErr] = useState("")
 
-  // Sync text when slider moves (but not during user typing)
+  // Text fields are synced from the slider in the handlers below.
   const isTypingMin = useRef(false)
   const isTypingMax = useRef(false)
-  const syncFromSlider = useCallback(() => {
-    if (!isTypingMin.current) {
-      setMinText(String(valueMin))
-      setMinErr("")
-    }
-    if (!isTypingMax.current) {
-      setMaxText(String(valueMax))
-      setMaxErr("")
-    }
-  }, [valueMin, valueMax])
-  // Call sync on render via effect — simpler: just update in render
-  // Since we can't use hooks conditionally, inline it below
 
-  const clamp = (v: number) => Math.round(Math.max(min, Math.min(max, v)) / step) * step
+  const clamp = useCallback(
+    (v: number) => Math.round(Math.max(min, Math.min(max, v)) / step) * step,
+    [min, max, step]
+  )
 
   const commitMin = useCallback((raw: string) => {
     isTypingMin.current = false
@@ -54,7 +45,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
     setMinText(String(final))
     setMinErr("")
     onChange(final, valueMax)
-  }, [valueMin, valueMax, min, max, step, MIN_GAP, onChange, clamp])
+  }, [valueMin, valueMax, MIN_GAP, onChange, clamp])
 
   const commitMax = useCallback((raw: string) => {
     isTypingMax.current = false
@@ -69,7 +60,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
     setMaxText(String(final))
     setMaxErr("")
     onChange(valueMin, final)
-  }, [valueMin, valueMax, min, max, step, MIN_GAP, onChange, clamp])
+  }, [valueMin, valueMax, MIN_GAP, onChange, clamp])
 
   const handleMinInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     isTypingMin.current = true
@@ -114,7 +105,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
   const maxPct = pct(valueMax)
 
   const inputFieldClass =
-    "w-full rounded-lg border bg-background px-3 py-2 text-center text-base font-semibold " +
+    "w-full rounded-lg border bg-background px-3 py-2.5 text-center text-base font-semibold " +
     "text-foreground outline-none transition placeholder:text-muted " +
     "focus:border-accent/50"
 

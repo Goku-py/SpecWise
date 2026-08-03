@@ -32,10 +32,13 @@ async function main() {
         headers: { Authorization: `Client-ID ${API_KEY}` },
       })
       if (!res.ok) { console.warn(`  HTTP ${res.status} for ${l.brand} ${l.model}`); continue }
-      const data: any = await res.json()
+      const data = (await res.json()) as {
+        results?: Array<{ urls?: { small?: string } }>
+      }
       if (!data.results?.length) { console.warn(`  No results for ${l.brand} ${l.model}`); continue }
 
-      const imgUrl = data.results[0].urls.small
+      const imgUrl = data.results[0].urls?.small
+      if (!imgUrl) { console.warn(`  No image URL for ${l.brand} ${l.model}`); continue }
       await prisma.laptop.update({ where: { id: l.id }, data: { imageUrl: imgUrl } })
       console.log(`  ✓ ${l.brand} ${l.model}`)
     } catch (e) {

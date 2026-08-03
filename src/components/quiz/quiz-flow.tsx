@@ -17,8 +17,8 @@ import {
 import type { QuizAnswers, QuestionMode } from "@/lib/types"
 import { defaultQuizAnswers } from "@/lib/types"
 import { fetchRecommendations } from "@/lib/api"
-import { useRegion } from "@/components/region-context"
 import { usdToLocal } from "@/lib/regions"
+import type { RegionConfig } from "@/lib/regions"
 import { formatPrice } from "@/lib/utils"
 import { RangeSlider } from "@/components/ui/range-slider"
 
@@ -44,9 +44,8 @@ function isAnswerEmpty(value: unknown): boolean {
   return false
 }
 
-export function QuizFlow() {
+export function QuizFlow({ region }: { region: RegionConfig }) {
   const router = useRouter()
-  const { region } = useRegion()
   const [mode, setMode] = useState<QuestionMode | null>(null)
   const [step, setStep] = useState(() => {
     if (typeof window === "undefined") return 0
@@ -286,11 +285,13 @@ export function QuizFlow() {
 
       {isLast && (
         <div className="mt-8 rounded-xl border border-border bg-card/50 p-4">
-          <label className="text-sm font-medium text-foreground">
+          <label htmlFor="quiz-email" className="text-sm font-medium text-foreground">
             Get these results by email <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
+            id="quiz-email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com"

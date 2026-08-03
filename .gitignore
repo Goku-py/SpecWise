@@ -13,6 +13,10 @@
 # testing
 /coverage
 
+# playwright artifacts
+/test-results/
+/playwright-report/
+
 # next.js
 /.next/
 /out/
@@ -37,6 +41,14 @@ dev.log
 .superdesign/
 .claude-audit/
 .opencode/
+.ignore
+
+# local agent/QA tool output
+.playwright-mcp/
+
+# superseded design-lane output (redesign direction lives in docs/PRODUCTION-AUDIT.md)
+docs/audit-shots/
+docs/design-system/
 
 # env files (can opt-in for committing if needed)
 .env

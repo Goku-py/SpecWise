@@ -3,7 +3,9 @@ import {
   ArrowRight, Code, Gamepad2, Palette, GraduationCap, Briefcase,
   ClipboardList, Cpu, Layers, ShoppingBag,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { prisma } from "@/lib/prisma"
 
 const useCases = [
   { icon: Code, label: "Software Development", desc: "RAM-heavy multitasking & Linux support.", href: "/category/coding" },
@@ -15,35 +17,61 @@ const useCases = [
 
 const steps = [
   { title: "Profile Quiz", desc: "Tell us about your daily tasks and environment." },
-  { title: "Spec Analysis", desc: "We parse 50k+ spec permutations against your needs." },
+  { title: "Spec Analysis", desc: "We compare your answers against every laptop's full spec sheet." },
   { title: "Smart Matching", desc: "Ranked recommendations with honest trade-offs." },
   { title: "Compare & Buy", desc: "Side-by-side comparisons at the best regional price." },
 ]
 
-const bentoCards = [
-  {
-    icon: Cpu, title: "Intelligent Matching", desc: "Our engine evaluates 50,000+ spec permutations against your workflow.",
-    stat: { value: "93%", label: "accuracy rate" }, colSpan: "md:col-span-2", delay: "0.1s",
-  },
-  {
-    icon: ClipboardList, title: "3-Min Quiz", desc: "Simple questions, no jargon.",
-    colSpan: "md:col-span-1", delay: "0.15s",
-  },
-  {
-    icon: Layers, title: "2k+ Models", desc: "Every model vetted for quality.",
-    colSpan: "md:col-span-1", delay: "0.2s",
-  },
-  {
-    icon: ShoppingBag, title: "Honest Matching", desc: "Unbiased recommendations based on real performance.",
-    colSpan: "md:col-span-2", delay: "0.25s",
-  },
-  {
-    icon: Briefcase, title: "Global Pricing", desc: "Real-time prices across 12 regions.",
-    colSpan: "md:col-span-1", delay: "0.3s",
-  },
-]
+// Real catalog counts, computed server-side at render time — no fabricated stats.
+async function getCatalogStats() {
+  try {
+    const [laptopCount, priceCount, regionGroups] = await Promise.all([
+      prisma.laptop.count({ where: { status: "active" } }),
+      prisma.laptopPrice.count(),
+      prisma.laptopPrice.groupBy({ by: ["region"] }),
+    ])
+    return { laptopCount, priceCount, regionCount: regionGroups.length }
+  } catch (e) {
+    console.error("Failed to load catalog stats:", e)
+    return { laptopCount: 0, priceCount: 0, regionCount: 0 }
+  }
+}
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stats = await getCatalogStats()
+
+  const bentoCards = [
+    {
+      icon: Cpu,
+      title: "Intelligent Matching",
+      desc: "Your quiz answers are compared against the full spec sheet of every laptop in the catalog.",
+      stat: { value: stats.laptopCount.toLocaleString(), label: "laptops evaluated" },
+      colSpan: "md:col-span-2", delay: "0.1s",
+    },
+    {
+      icon: ClipboardList, title: "3-Min Quiz", desc: "Simple questions, no jargon.",
+      colSpan: "md:col-span-1", delay: "0.15s",
+    },
+    {
+      icon: Layers,
+      title: "Curated Catalog",
+      desc: "Every laptop has verified specs and regional pricing.",
+      stat: { value: stats.priceCount.toLocaleString(), label: "price points tracked" },
+      colSpan: "md:col-span-1", delay: "0.2s",
+    },
+    {
+      icon: ShoppingBag, title: "Honest Matching", desc: "Recommendations ranked by fit, with trade-offs shown alongside.",
+      colSpan: "md:col-span-2", delay: "0.25s",
+    },
+    {
+      icon: Briefcase,
+      title: "Regional Pricing",
+      desc: "Prices tracked per region in local currency.",
+      stat: { value: stats.regionCount.toLocaleString(), label: "regions covered" },
+      colSpan: "md:col-span-1", delay: "0.3s",
+    },
+  ]
+
   return (
     <div>
       {/* ───── Hero ───── */}
@@ -63,32 +91,28 @@ export default function HomePage() {
               className="animate-fade-in text-lg md:text-xl text-muted mb-12 max-w-2xl leading-relaxed"
               style={{ animationDelay: "0.2s" }}
             >
-              Answer 3 simple questions. We parse thousands of specs to find your perfect match.
+              Answer 3 simple questions. We match your answers against detailed specs for every laptop we track.
             </p>
             <div
               className="animate-fade-in flex flex-wrap items-center gap-4 mb-16"
               style={{ animationDelay: "0.3s" }}
             >
-              <Link href="/quiz">
-                <Button size="lg" className="gap-2 px-8 py-4 text-base">
-                  Start Quiz <ArrowRight className="h-4 w-4" />
-                </Button>
+              <Link href="/quiz" className={buttonVariants({ size: "lg", className: "gap-2 px-8 py-4 text-base" })}>
+                Start Quiz <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/laptops">
-                <Button variant="secondary" size="lg" className="px-8 py-4 text-base">
-                  Browse Catalog
-                </Button>
+              <Link href="/laptops" className={buttonVariants({ variant: "secondary", size: "lg", className: "px-8 py-4 text-base" })}>
+                Browse Catalog
               </Link>
             </div>
             <div
               className="animate-fade-in flex flex-col md:flex-row md:items-center gap-4 md:gap-6 text-sm text-muted"
               style={{ animationDelay: "0.35s" }}
             >
-              <span>1,248 Laptops</span>
+              <span>{stats.laptopCount.toLocaleString()} Laptops</span>
               <span className="hidden md:inline text-border">•</span>
-              <span>12 Global Regions</span>
+              <span>{stats.regionCount.toLocaleString()} Global Regions</span>
               <span className="hidden md:inline text-border">•</span>
-              <span>85,000+ Price Points</span>
+              <span>{stats.priceCount.toLocaleString()} Price Points</span>
             </div>
           </div>
         </div>
@@ -106,7 +130,7 @@ export default function HomePage() {
                 style={{ animationDelay: card.delay }}
               >
                 <Icon className="h-8 w-8 text-accent mb-4" />
-                <h3 className="text-lg font-bold text-foreground mb-2">{card.title}</h3>
+                <h2 className="text-lg font-bold text-foreground mb-2">{card.title}</h2>
                 <p className="text-sm text-muted leading-relaxed">{card.desc}</p>
                 {card.stat && (
                   <div className="mt-6 text-3xl font-bold text-accent">
@@ -136,7 +160,7 @@ export default function HomePage() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="animate-fade-in group rounded-xl border border-border bg-card p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/30 hover:bg-card-hover"
+                  className="animate-fade-in group rounded-xl border border-border bg-card p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-accent/30 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   style={{ animationDelay: `${0.1 + i * 0.06}s` }}
                 >
                   <Icon className="h-5 w-5 text-accent mb-3" />
@@ -168,7 +192,7 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mb-6">
                 <span className="text-accent font-bold text-sm">{i + 1}</span>
               </div>
-              <h4 className="text-sm font-bold text-foreground mb-2">{step.title}</h4>
+              <h3 className="text-sm font-bold text-foreground mb-2">{step.title}</h3>
               <p className="text-xs text-muted leading-relaxed max-w-[200px]">{step.desc}</p>
             </div>
           ))}
@@ -181,13 +205,11 @@ export default function HomePage() {
           <h2 className="animate-fade-in text-3xl font-bold text-foreground mb-8">
             Ready to find your perfect laptop?
           </h2>
-          <Link href="/quiz" className="animate-fade-in inline-block" style={{ animationDelay: "0.1s" }}>
-            <Button size="lg" className="gap-2 px-12 py-5 text-lg font-bold shadow-xl shadow-accent/10">
-              Find My Laptop <ArrowRight className="h-5 w-5" />
-            </Button>
+          <Link href="/quiz" className={cn("animate-fade-in inline-block", buttonVariants({ size: "lg", className: "gap-2 px-12 py-5 text-lg font-bold shadow-xl shadow-accent/10" }))} style={{ animationDelay: "0.1s" }}>
+            Find My Laptop <ArrowRight className="h-5 w-5" />
           </Link>
           <div className="animate-fade-in mt-6 text-xs text-muted" style={{ animationDelay: "0.2s" }}>
-            No account required • Free to use • Updated daily
+            No account required • Free to use
           </div>
         </div>
       </section>
