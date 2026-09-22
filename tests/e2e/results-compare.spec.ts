@@ -35,9 +35,12 @@ test.describe("results page", () => {
     const errors = collectConsoleErrors(page)
     await page.goto("/results")
     await page.waitForURL("**/quiz")
-    // The quiz now opens on the gate screen; the first step is behind a mode pick
-    await expect(page.getByRole("heading", { level: 1, name: "Let's find your laptop" })).toBeVisible()
-    await expect(page.getByRole("button", { name: /Quick & Simple/ })).toBeVisible()
+    // /quiz renders the 3-step SpecQuiz directly — step 1 (Workload) is shown
+    // immediately; there is no gate/mode picker.
+    await expect(
+      page.getByRole("heading", { level: 2, name: "What will you primarily use it for?" })
+    ).toBeVisible()
+    await expect(page.getByRole("navigation", { name: "Quiz progress" })).toContainText("Workload")
     shouldHaveNoConsoleErrors(errors)
   })
 })

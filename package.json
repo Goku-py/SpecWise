@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:unit": "cross-env SKIP_API_WARMUP=1 vitest run src/lib/__tests__ tests/scoring",
-    "test:api": "vitest run tests/api",
+    "test:api": "vitest run tests/api --no-file-parallelism",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",

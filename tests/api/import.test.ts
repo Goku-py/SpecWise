@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { prisma } from "@/lib/prisma"
 import { deleteLaptop } from "@/lib/db/catalog"
 import { apiBase, bearerHeaders, getJson, uniqueIp } from "./helpers"
@@ -44,6 +44,18 @@ function postImport(body: unknown) {
 }
 
 describe("POST /api/admin/import", () => {
+  /**
+   * PriceSnapshot rows are written by the price-sync cron (POST /api/cron/
+   * update-prices), NOT by the seed — so a freshly migrated + seeded CI database
+   * legitimately has ZERO. Capture the baseline here and assert the import /
+   * cleanup cycle neither creates nor orphans snapshots, instead of hardcoding a
+   * count that only holds on a long-lived dev database.
+   */
+  let snapshotsBefore = 0
+  beforeAll(async () => {
+    snapshotsBefore = await prisma.priceSnapshot.count()
+  })
+
   it("imports one valid laptop with a price", async () => {
     const res = await postImport({
       laptops: [
@@ -115,8 +127,9 @@ describe("POST /api/admin/import", () => {
       expect(brands).toBe(10)
       expect(retailers).toBe(6)
       expect(qaLeft).toBe(0)
-      // Snapshots are NOT asserted: the dev cron may add rows mid-run.
-      expect(snapshots).toBeGreaterThanOrEqual(672)
+      // Baseline-relative: the import/cleanup cycle must not add orphaned
+      // snapshots (0 on CI, whatever the dev DB already holds otherwise).
+      expect(snapshots).toBe(snapshotsBefore)
     } finally {
       await prisma.$disconnect()
     }

@@ -1,9 +1,8 @@
-import { afterAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { prisma } from "@/lib/prisma"
 import { recordSlugRedirect } from "@/lib/db/catalog"
 import { apiBase, getJson, uniqueIp, xffHeader } from "./helpers"
 
-const TEST_LAPTOP_ID = "phase3-slug-test-laptop";
 const OLD_SLUG = "phase3-old-test-slug";
 
 async function pageStatus(path: string): Promise<{ status: number; location: string | null }> {
@@ -20,26 +19,46 @@ async function pageStatus(path: string): Promise<{ status: number; location: str
  * Cleans up every row it creates.
  */
 describe("slug redirects", () => {
+  // Deterministic start: an interrupted previous run (crash / early exit) can
+  // leave the probe slug behind because afterAll never ran, which would break
+  // the "no row yet" assertions below.
+  beforeAll(async () => {
+    await prisma.slugRedirect.deleteMany({ where: { from: OLD_SLUG } });
+  });
+
   it("recordSlugRedirect is idempotent, skips self-redirects, latest wins", async () => {
+    // SlugRedirect.laptopId has an FK to Laptop.id (ON DELETE CASCADE), so the
+    // test must reference REAL seeded laptops — a fabricated id throws a
+    // foreign-key violation. Using existing rows (rather than creating test
+    // laptops) also keeps the exact catalog counts other API suites assert.
+    const owners = await prisma.laptop.findMany({
+      select: { id: true },
+      orderBy: { id: "asc" },
+      take: 2,
+    })
+    const [owner, challenger] = owners;
+    expect(owner).toBeDefined();
+    expect(challenger).toBeDefined();
+
     // Self-redirect: no row created.
-    await recordSlugRedirect(prisma, TEST_LAPTOP_ID, OLD_SLUG, OLD_SLUG);
+    await recordSlugRedirect(prisma, owner.id, OLD_SLUG, OLD_SLUG);
     expect(await prisma.slugRedirect.findUnique({ where: { from: OLD_SLUG } })).toBeNull();
 
     // Null old slug: no row created.
-    await recordSlugRedirect(prisma, TEST_LAPTOP_ID, null, "phase3-new-slug");
+    await recordSlugRedirect(prisma, owner.id, null, "phase3-new-slug");
     expect(await prisma.slugRedirect.findUnique({ where: { from: OLD_SLUG } })).toBeNull();
 
     // Record + re-record (idempotent, same owner).
-    await recordSlugRedirect(prisma, TEST_LAPTOP_ID, OLD_SLUG, "phase3-new-slug");
-    await recordSlugRedirect(prisma, TEST_LAPTOP_ID, OLD_SLUG, "phase3-new-slug");
+    await recordSlugRedirect(prisma, owner.id, OLD_SLUG, "phase3-new-slug");
+    await recordSlugRedirect(prisma, owner.id, OLD_SLUG, "phase3-new-slug");
     const row = await prisma.slugRedirect.findUnique({ where: { from: OLD_SLUG } });
-    expect(row?.laptopId).toBe(TEST_LAPTOP_ID);
+    expect(row?.laptopId).toBe(owner.id);
     expect(await prisma.slugRedirect.count({ where: { from: OLD_SLUG } })).toBe(1);
 
     // Latest owner wins on `from` collision.
-    await recordSlugRedirect(prisma, "other-laptop", OLD_SLUG, "other-slug");
+    await recordSlugRedirect(prisma, challenger.id, OLD_SLUG, "other-slug");
     expect((await prisma.slugRedirect.findUnique({ where: { from: OLD_SLUG } }))?.laptopId).toBe(
-      "other-laptop"
+      challenger.id
     );
   });
 
