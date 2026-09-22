@@ -48,6 +48,10 @@ jobs:
         run: npx tsc --noEmit
       - name: Unit tests
         run: npm run test:unit
+        # Explicit belt-and-braces: tests/api/global-setup.ts skips the live
+        # server warm-up when this is set (the unit job has no server).
+        env:
+          SKIP_API_WARMUP: "1"
 
   api:
     name: API integration tests
