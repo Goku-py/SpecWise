@@ -11,7 +11,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "src/**/__tests__/**/*.test.ts"],
+    globalSetup: ["tests/api/global-setup.ts"],
+    testTimeout: 30_000,
     // Loads .env before any test module evaluates (prisma builds its pool
     // eagerly at import). Harmless for the scoring suite.
     setupFiles: ["tests/setup-env.ts"],

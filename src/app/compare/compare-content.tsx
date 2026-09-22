@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { BuyButton } from "@/components/product/buy-button"
 import { MatchBadge } from "@/components/ui/progress"
 import { formatPrice } from "@/lib/utils"
+import { readResultsSnapshot } from "@/lib/storage"
 import type { RecommendedLaptop } from "@/lib/types"
 
 // Arrow keys scroll the horizontally scrollable table region so keyboard-only
@@ -46,8 +47,6 @@ const rows: RowDef[] = [
   { label: "Match Score", getValue: l => `${l.matchScore}%` },
 ]
 
-const RESULTS_KEY = "specwise-results"
-
 // Sentinel snapshots: the server snapshot ("not mounted") is what SSR and the
 // hydration render see — identical to the old `loading` branch — while the real
 // snapshot is only read after mount. "\u0000" can never collide with stored
@@ -61,7 +60,8 @@ function subscribeCompareStorage(onStoreChange: () => void) {
 }
 
 function getCompareSnapshot(): string {
-  return localStorage.getItem(RESULTS_KEY) ?? NO_RESULTS
+  // Envelope-aware read (v2 canonicalizes, legacy passes through untouched).
+  return readResultsSnapshot() ?? NO_RESULTS
 }
 
 function getCompareServerSnapshot(): string {
@@ -108,7 +108,7 @@ function CompareContent() {
   if (!hasStoredResults) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20">
-        <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="rounded border border-border bg-card p-8 text-center shadow-sm">
           <h2 className="text-2xl font-semibold text-foreground">No results found</h2>
           <p className="mt-2 text-sm text-muted">
             Run the quiz first so we know which laptops to compare.
@@ -124,7 +124,7 @@ function CompareContent() {
   if (missingIds.length > 0) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20">
-        <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="rounded border border-border bg-card p-8 text-center shadow-sm">
           <h2 className="text-2xl font-semibold text-foreground">Some laptops are missing</h2>
           <p className="mt-2 text-sm text-muted">
             We couldn&apos;t find these IDs in your latest results:
@@ -143,7 +143,7 @@ function CompareContent() {
   if (laptops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20">
-        <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="rounded border border-border bg-card p-8 text-center shadow-sm">
           <h2 className="text-2xl font-semibold text-foreground">No laptops to compare</h2>
           <p className="mt-2 text-sm text-muted">Select laptops from your results to compare them.</p>
           <Link href="/results" className={buttonVariants({ className: "mt-6" })}>
@@ -171,7 +171,7 @@ function CompareContent() {
       </div>
 
       {/* Table card */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-background">
+      <div className="overflow-hidden rounded border border-border bg-card shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-background">
         <div
           role="region"
           aria-label="Laptop comparison table, horizontally scrollable"
@@ -181,13 +181,13 @@ function CompareContent() {
         >
           <table className="w-full min-w-[600px] border-collapse">
             <thead>
-              <tr className="bg-accent/5">
-                <th className="sticky left-0 z-10 min-w-[140px] bg-accent/5 pr-4 text-left text-sm font-semibold text-muted">
+              <tr className="bg-elevated">
+                <th className="sticky left-0 z-10 min-w-[140px] bg-elevated pr-4 text-left font-mono text-[10px] font-semibold uppercase tracking-wider text-muted">
                   Spec
                 </th>
                 {laptops.map(l => (
                   <th key={l.id} className="min-w-[200px] px-3 pb-4 pt-3 text-left">
-                    <div className="text-xs text-muted">{l.brand}</div>
+                    <div className="font-mono text-[10px] text-muted">{l.brand}</div>
                     <div className="text-sm font-semibold text-foreground">{l.model}</div>
                     <div className="mt-1">
                       <MatchBadge score={l.matchScore} />
@@ -198,14 +198,14 @@ function CompareContent() {
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.label} className="border-b border-border transition-colors hover:bg-accent/5">
-                  <td className="sticky left-0 z-10 bg-card py-3 pr-4 text-sm font-medium text-muted">
+                <tr key={row.label} className={`border-b border-border transition-colors hover:bg-accent/5${row.label === "Match Score" ? " bg-accent-success/5" : ""}`}>
+                  <td className="sticky left-0 z-10 bg-card py-3 pr-4 font-mono text-[10px] font-medium uppercase tracking-wider text-muted">
                     {row.label}
                   </td>
                   {laptops.map((l, idx) => {
                     const val = row.getValue(l)
                     return (
-                      <td key={idx} className="px-3 py-3 text-sm text-foreground">
+                      <td key={idx} className={`px-3 py-3 font-mono text-xs text-foreground${row.label === "Match Score" ? " font-semibold text-accent-success" : ""}`}>
                         {typeof val === "boolean" ? (
                           val ? (
                             <Check className="h-4 w-4 text-accent" />

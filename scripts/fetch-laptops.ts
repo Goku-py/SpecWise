@@ -115,10 +115,6 @@ function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms))
 }
 
-function laptopKey(l: { brand: string; model: string; variant: string | null }): string {
-  return `${l.brand}|${l.model}|${l.variant ?? ""}`
-}
-
 function extractNumber(text: string): number | null {
   const m = text.match(/(\d+[.,]?\d*)/)
   return m ? parseFloat(m[1].replace(",", ".")) : null
@@ -130,11 +126,6 @@ function extractGB(text: string): number | null {
   const m2 = text.match(/(\d+[.,]?\d*)\s*TB/i)
   if (m2) return Math.round(parseFloat(m2[1].replace(",", ".")) * 1024)
   return null
-}
-
-function extractHz(text: string): number | null {
-  const m = text.match(/(\d+)\s*Hz/i)
-  return m ? parseInt(m[1]) : null
 }
 
 function extractKg(text: string): number | null {

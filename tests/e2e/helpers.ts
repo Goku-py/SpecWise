@@ -112,6 +112,6 @@ export function clearSpecwiseStorage(page: Page): void {
     localStorage.removeItem("specwise-region")
     localStorage.removeItem("specwise-quiz-answers")
     localStorage.removeItem("specwise-quiz-step")
-    localStorage.removeItem("specwise-theme")
+    localStorage.removeItem("specwise-quiz-mode")
   })
 }

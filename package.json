@@ -8,12 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:unit": "vitest run tests/scoring",
+    "test:api": "vitest run tests/api",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:generate-laptops": "npx tsx scripts/generate-laptops.ts",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:backfill-spine": "npx tsx prisma/scripts/backfill-spine.ts",
+    "db:backfill-spine:dry": "npx tsx prisma/scripts/backfill-spine.ts --dry-run",
     "db:fetch-images": "npx tsx scripts/fetch-images.ts",
     "db:setup": "npm run db:generate-laptops && prisma migrate dev && npx tsx prisma/seed.ts"
   },
@@ -23,8 +27,11 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.23.0",
+    "motion": "^13.0.0",
     "next": "16.2.10",
     "pg": "^8.22.0",
     "prisma": "^7.8.0",
@@ -32,7 +39,9 @@
     "react-dom": "19.2.4",
     "resend": "^6.17.2",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "three": "^0.185.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -41,6 +50,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.185.4",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",

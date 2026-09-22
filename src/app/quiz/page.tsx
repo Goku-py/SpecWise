@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import dynamic from "next/dynamic"
 import { getRegionFromCookies } from "@/lib/region"
+import { parseQuizShareParams, type QuizSearchParams } from "@/lib/share"
 
 export const metadata: Metadata = {
   title: "Laptop Quiz — Find the Right Laptop | SpecWise",
@@ -8,8 +9,8 @@ export const metadata: Metadata = {
     "Answer a few quick questions about your budget, workload, and preferences to get personalized laptop recommendations.",
 }
 
-const QuizFlow = dynamic(
-  () => import("@/components/quiz/quiz-flow").then(m => m.QuizFlow),
+const SpecQuiz = dynamic(
+  () => import("@/components/quiz/SpecQuiz").then(m => m.SpecQuiz),
   {
     loading: QuizFlowLoading,
   }
@@ -38,7 +39,12 @@ function QuizFlowLoading() {
   )
 }
 
-export default async function QuizPage() {
+export default async function QuizPage({
+  searchParams,
+}: {
+  searchParams: Promise<QuizSearchParams>
+}) {
   const region = await getRegionFromCookies()
-  return <QuizFlow region={region} />
+  const params = await searchParams
+  return <SpecQuiz region={region} initialSelection={parseQuizShareParams(params)} />
 }

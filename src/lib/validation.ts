@@ -72,7 +72,7 @@ function nullableBoolean() {
 }
 
 export const QuizAnswersSchema = z.object({
-  region: z.string().default("US"),
+  region: z.string().max(8).default("US"),
 
   // Required
   useCase: stringEnum(useCases),
@@ -92,9 +92,9 @@ export const QuizAnswersSchema = z.object({
   gaming: nullableStringEnum(gamingOptions),
   upgradeability: nullableStringEnum(upgradeOptions),
   buildQuality: nullableStringEnum(importanceOptions),
-  ports: z.array(z.string()).max(6).default([]),
+  ports: z.array(z.string().max(64)).max(6).default([]),
   webcam: nullableStringEnum(importanceOptions),
-  security: z.array(z.string()).max(5).default([]),
+  security: z.array(z.string().max(64)).max(5).default([]),
   refurbished: nullableBoolean(),
 
   // Email is sent alongside answers but is not part of QuizAnswers
@@ -102,6 +102,9 @@ export const QuizAnswersSchema = z.object({
     val => (typeof val === "string" ? val.trim() : val),
     z.union([z.literal(""), z.string().email().max(254)]).optional()
   ),
-})
+}).refine(
+  d => d.budgetMin == null || d.budgetMax == null || d.budgetMin <= d.budgetMax,
+  { message: "budgetMin must be ≤ budgetMax", path: ["budgetMin"] }
+)
 
 export type QuizRequest = z.infer<typeof QuizAnswersSchema>

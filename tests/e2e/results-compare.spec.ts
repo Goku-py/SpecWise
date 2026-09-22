@@ -18,10 +18,11 @@ test.describe("results page", () => {
     await expect(page.getByText("Best Match")).toBeVisible()
     await expect(page.getByText("More Options")).toBeVisible()
 
-    // Top match (level-2 heading) + up to 6 "More Options" cards (level-3 headings)
+    // 1 "ADJUST WEIGHTS" panel heading in the aside + 1 level-3 heading per
+    // card (top match card + up to 6 "More Options" cards)
     const main = page.locator("main")
     await expect(main.getByRole("heading", { level: 3 })).toHaveCount(
-      Math.min(6, SEEDED_RESULTS.length - 1)
+      2 + Math.min(6, SEEDED_RESULTS.length - 1)
     )
     await expect(main.getByRole("button", { name: "Compare", exact: true })).toHaveCount(
       1 + Math.min(6, SEEDED_RESULTS.length - 1)
@@ -34,7 +35,9 @@ test.describe("results page", () => {
     const errors = collectConsoleErrors(page)
     await page.goto("/results")
     await page.waitForURL("**/quiz")
-    await expect(page.getByRole("heading", { level: 1, name: "How experienced are you with laptops?" })).toBeVisible()
+    // The quiz now opens on the gate screen; the first step is behind a mode pick
+    await expect(page.getByRole("heading", { level: 1, name: "Let's find your laptop" })).toBeVisible()
+    await expect(page.getByRole("button", { name: /Quick & Simple/ })).toBeVisible()
     shouldHaveNoConsoleErrors(errors)
   })
 })

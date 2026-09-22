@@ -109,10 +109,42 @@ interface SeedLaptop {
   [key: string]: unknown
 }
 
-async function seedLaptops(brandIds: Map<string, string>) {
+/**
+ * Phase 3: fail-fast row validation (runs before ANY write, including dry-run).
+ * Returns human-readable errors; empty means valid.
+ */
+function validateSeedRow(lap: SeedLaptop, index: number): string[] {
+  void index
+  const errs: string[] = []
+  if (!lap.brand || !lap.model) errs.push("brand/model required")
+  if (!Number.isFinite(lap.price) || lap.price < 0) errs.push("price must be a finite number >= 0")
+  if (!Number.isFinite(lap.ramAmount) || !Number.isFinite(lap.storageAmount)) errs.push("ramAmount/storageAmount must be finite")
+  if (!Number.isFinite(lap.displaySize)) errs.push("displaySize must be finite")
+  if (!Array.isArray(lap.ports) || !Array.isArray(lap.securityFeatures)) errs.push("ports/securityFeatures must be arrays")
+  for (const p of lap.pricesOverride ?? []) {
+    if (!p.region || !p.retailer || !Number.isFinite(p.price) || p.price < 0) {
+      errs.push(`pricesOverride has an invalid entry (region ${String(p.region)})`)
+      break
+    }
+  }
+  return errs
+}
+
+/** Read + validate the data file. Throws before any write on invalid rows. */
+function loadSeedRows(): SeedLaptop[] {
   const filePath = path.join(__dirname, "..", "data", "laptops.json")
-  const raw = fs.readFileSync(filePath, "utf-8")
-  const laptops: SeedLaptop[] = JSON.parse(raw)
+  const laptops: SeedLaptop[] = JSON.parse(fs.readFileSync(filePath, "utf-8"))
+  const errors: string[] = []
+  laptops.forEach((lap, i) => {
+    for (const e of validateSeedRow(lap, i)) errors.push(`row ${i}: ${e}`)
+  })
+  if (errors.length > 0) throw new Error(`Seed validation failed:\n${errors.join("\n")}`)
+  return laptops
+}
+
+async function seedLaptops(brandIds: Map<string, string>) {
+  // Validated up front: invalid rows abort before any write.
+  const laptops = loadSeedRows()
 
   console.log(`Seeding ${laptops.length} laptops with regional prices...`)
 
@@ -132,19 +164,29 @@ async function seedLaptops(brandIds: Map<string, string>) {
     // Legacy isActive field (if ever present in data) maps to status; default active.
     const status = lap.isActive === false ? "archived" : "active"
 
-    await prisma.laptop.upsert({
-      where: { id },
-      update: {
-        slug,
-        brandId: brandIds.get(lap.brand) ?? null,
-        isPopular: lap.isPopular,
-        notes: lap.notes || null,
-      },
+    // Phase 3: each laptop + its prices commit atomically; a renamed slug
+    // keeps a 308 trail. Re-running the seed repairs partial rows (upserts).
+    // Use PricesAPI data if available, otherwise generate from fx rates
+    const prices = lap.pricesOverride ?? generatePrices(lap.price, lap.url, lap.affiliateUrl)
+    await prisma.$transaction(async tx => {
+      const existing = await tx.laptop.findUnique({ where: { id }, select: { slug: true } })
+      await tx.laptop.upsert({
+        where: { id },
+        update: {
+          slug,
+          brandId: brandIds.get(lap.brand) ?? null,
+          isPopular: lap.isPopular,
+          notes: lap.notes || null,
+          dataSource: "seed",
+          sourceUpdatedAt: new Date(),
+        },
       create: {
         id,
         slug,
         brandId: brandIds.get(lap.brand) ?? null,
         status,
+        dataSource: "seed",
+        sourceUpdatedAt: new Date(),
         brand: lap.brand,
         model: lap.model,
         variant: lap.variant || null,
@@ -187,15 +229,21 @@ async function seedLaptops(brandIds: Map<string, string>) {
       },
     })
 
-    // Use PricesAPI data if available, otherwise generate from fx rates
-    const prices = lap.pricesOverride ?? generatePrices(lap.price, lap.url, lap.affiliateUrl)
-    for (const p of prices) {
-      await prisma.laptopPrice.upsert({
-        where: { laptopId_region_retailer: { laptopId: id, region: p.region, retailer: p.retailer } },
-        update: { price: p.price, currency: p.currency, url: p.url, affiliateUrl: p.affiliateUrl },
-        create: { laptopId: id, ...p },
-      })
-    }
+      for (const p of prices) {
+        await tx.laptopPrice.upsert({
+          where: { laptopId_region_retailer: { laptopId: id, region: p.region, retailer: p.retailer } },
+          update: { price: p.price, currency: p.currency, url: p.url, affiliateUrl: p.affiliateUrl },
+          create: { laptopId: id, ...p },
+        })
+      }
+      if (existing?.slug && existing.slug !== slug) {
+        await tx.slugRedirect.upsert({
+          where: { from: existing.slug },
+          update: { laptopId: id },
+          create: { from: existing.slug, laptopId: id },
+        })
+      }
+    })
 
     console.log(`  ✓ ${lap.brand} ${lap.model} — ${prices.length} region prices`)
   }
@@ -225,6 +273,12 @@ async function invalidateCatalogCacheAfterSeed() {
 }
 
 async function fetchUnsplashImages() {
+  // Phase 3: network image I/O is opt-in — core seed correctness never depends
+  // on it (rows are complete with imageUrl null).
+  if (process.env.SEED_FETCH_IMAGES !== "1") {
+    console.log("Skipping Unsplash image fetch (SEED_FETCH_IMAGES=1 to enable)")
+    return
+  }
   const apiKey = process.env.UNSPLASH_ACCESS_KEY
   if (!apiKey) { console.log("Skipping Unsplash image fetch (UNSPLASH_ACCESS_KEY not set)"); return }
 
@@ -250,12 +304,44 @@ async function fetchUnsplashImages() {
   }
 }
 
+/**
+ * Phase 3: dry-run diff — validates rows and reports what WOULD change
+ * (creates, updates, slug collisions needing suffixes). Writes nothing.
+ */
+async function dryRun(): Promise<void> {
+  const laptops = loadSeedRows()
+  const existing = await prisma.laptop.findMany({ select: { id: true, slug: true } })
+  const byId = new Map(existing.map(e => [e.id, e.slug]))
+  const usedSlugs = new Set<string>()
+  let creates = 0, updates = 0, suffixed = 0
+  for (const lap of laptops) {
+    const id = deterministicLaptopId(lap.brand, lap.model, lap.variant)
+    const base = slugify(`${lap.brand}-${lap.model}-${lap.variant || ""}`)
+    const slug = uniqueSlug(base, usedSlugs)
+    usedSlugs.add(slug)
+    if (slug !== base) suffixed++
+    if (byId.has(id)) updates++
+    else creates++
+  }
+  const prices = laptops.reduce((n, lap) => n + (lap.pricesOverride ?? generatePrices(lap.price)).length, 0)
+  console.log(`DRY RUN: ${laptops.length} rows valid — ${creates} would create, ${updates} would update, ${prices} price rows, ${suffixed} slugs need suffixes.`)
+}
+
 async function main() {
   console.log("🌱 Starting seed...\n")
 
-  // Clear existing data
-  await prisma.laptopPrice.deleteMany()
-  await prisma.laptop.deleteMany()
+  // Phase 3: destructive wipe is opt-in. Default path is idempotent upserts.
+  if (process.env.SEED_DRY_RUN === "1") {
+    await dryRun()
+    return
+  }
+  if (process.env.ALLOW_WIPE_SEED === "1") {
+    console.log("ALLOW_WIPE_SEED=1 — clearing existing laptop/price data")
+    await prisma.laptopPrice.deleteMany()
+    await prisma.laptop.deleteMany()
+  } else {
+    console.log("Wipe skipped (set ALLOW_WIPE_SEED=1 to clear first) — upserting idempotently")
+  }
 
   await upsertBrands().then(brands => upsertRetailers().then(() => seedLaptops(brands)))
   await invalidateCatalogCacheAfterSeed()

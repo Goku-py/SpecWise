@@ -5,10 +5,11 @@ import { scoreLaptops } from "@/lib/scoring"
 import { sendResultsEmail } from "@/lib/email"
 import { getClientIP, checkRateLimit } from "@/lib/rate-limit"
 import { QuizAnswersSchema } from "@/lib/validation"
+import { normalizeRegion } from "@/lib/regions"
 import { getActiveCatalog, toScorable } from "@/lib/catalog-cache"
 import type { QuizAnswers, ScorableLaptop } from "@/lib/types"
 
-export const POST = withLogging(async (request, rid) => {
+export const POST = withLogging(async (request) => {
     // Rate limit: 60 requests/minute/IP
     const ip = getClientIP(request)
     const rateLimit = await checkRateLimit(`post-quiz:${ip}`, 60, 60)
@@ -32,7 +33,12 @@ export const POST = withLogging(async (request, rid) => {
       return NextResponse.json({ error: "Invalid quiz answers", issues }, { status: 400 })
     }
 
-    const { email: parsedEmail, region, ...rest } = parseResult.data
+    const { email: parsedEmail, region: rawRegion, ...rest } = parseResult.data
+    // Phase 3: unknown regions 400 — never silently fall back to another region.
+    const region = normalizeRegion(rawRegion);
+    if (!region) {
+      return NextResponse.json({ error: "Unsupported region" }, { status: 400 })
+    }
     const answers = rest as QuizAnswers
     const email = parsedEmail?.trim() || undefined
 

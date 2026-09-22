@@ -79,15 +79,15 @@ export function CatalogView({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       {/* Breadcrumb */}
-      <nav className="mb-4 text-xs text-muted">
+      <nav className="mb-4 text-xs text-muted font-mono">
         <Link
           href="/"
           className="inline-flex items-center rounded p-3.5 -m-3.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          Home
+          HOME
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-foreground">Catalog</span>
+        <span className="text-foreground">CATALOG</span>
       </nav>
 
       {/* Page header */}
@@ -102,23 +102,22 @@ export function CatalogView({
 
       {/* Search bar */}
       <div className="relative mb-6">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           ref={searchInputRef}
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Search by brand or model…"
-          autoFocus
+          placeholder="Search by brand or model..."
           className={cn(
-            "w-full rounded-xl border border-border bg-background py-3.5 pl-12 pr-20 text-sm text-foreground",
+            "w-full rounded border border-border bg-background py-3 pl-12 pr-20 text-sm text-foreground font-mono",
             "placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30",
             "transition-colors"
           )}
         />
         {!query && !loading && (
-          <kbd className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border bg-card-hover px-1.5 py-0.5 text-[10px] font-medium text-muted sm:inline-flex">
-            <span className="text-xs">⌘</span>K
+          <kbd className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-border bg-card-hover px-1.5 py-0.5 text-[10px] font-medium text-muted sm:inline-flex font-mono">
+            /
           </kbd>
         )}
         {loading && (
@@ -128,7 +127,7 @@ export function CatalogView({
 
       {/* Stats line */}
       {!loading && (
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-4 text-xs text-muted font-mono">
           {laptops.length === 1 ? "1 laptop found" : `${laptops.length} laptops found`}
         </p>
       )}
@@ -156,7 +155,7 @@ export function CatalogView({
           {error && (
             <button
               onClick={() => search(query, initialRegion.code)}
-              className="mt-4 rounded-lg bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+              className="mt-4 rounded bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
             >
               Try again
             </button>

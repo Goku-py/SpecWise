@@ -57,14 +57,16 @@ describe("FILTER_STEPS — each step removes non-matching laptops when survivabl
     const subset = [tinyWindowsPro, tinyMacAir, tinyBudgetLow] // 32 / 16 / 8
 
     expect(rankedIds(subset, answers({ minRam: 32 }))).toEqual(["tiny-windows-pro"])
-    expect(rankedIds(subset, answers({ minRam: 16 }))).toEqual(["tiny-windows-pro", "tiny-mac-air"])
+    // v2 ranking: cheaper + lighter + longer-battery mac-air outranks
+    // windows-pro for the default (general) profile — value/battery weight.
+    expect(rankedIds(subset, answers({ minRam: 16 }))).toEqual(["tiny-mac-air", "tiny-windows-pro"])
   })
 
   it("minStorage step keeps only laptops meeting the minimum", () => {
     const subset = [tinyWindowsPro, tinyMacAir, tinyBudgetLow] // 1024 / 512 / 256
 
     expect(rankedIds(subset, answers({ minStorage: 1024 }))).toEqual(["tiny-windows-pro"])
-    expect(rankedIds(subset, answers({ minStorage: 512 }))).toEqual(["tiny-windows-pro", "tiny-mac-air"])
+    expect(rankedIds(subset, answers({ minStorage: 512 }))).toEqual(["tiny-mac-air", "tiny-windows-pro"])
   })
 
   it("gpu step keeps only dedicated-GPU laptops when dedicated is requested", () => {
@@ -142,10 +144,10 @@ describe("FILTER_STEPS — fallbacks keep results when a strict step would empty
   })
 })
 
-describe("relaxation pass (second pass) — actual contract", () => {
-  it("never runs when at least one active laptop exists: impossible filters still yield results", () => {
-    // Most aggressive answer set possible. Pass 1's per-step fallbacks guarantee
-    // a non-empty pool, so the second relaxation pass is unreachable.
+describe("relaxation ledger (Phase 2) — ordered, capped, surfaced", () => {
+  it("impossible filters relax in order with a ledger, then exhaust gracefully", () => {
+    // Most aggressive answer set possible. v2 relaxes gpu → ports → storage
+    // (3-step cap), still empty → exhausted with closest misses flagged.
     const a = answers({
       budgetMin: 1,
       budgetMax: 1,
@@ -159,9 +161,14 @@ describe("relaxation pass (second pass) — actual contract", () => {
 
     const result = scoreLaptops(tinyCatalog, a)
     expect(result.length).toBeGreaterThan(0)
-    // Only the dedicated-GPU step survived (its strict filter matched 5 laptops).
-    expect(result).toHaveLength(5)
-    for (const r of result) expect(r.gpuType).toBe("dedicated")
+    expect(result.length).toBeLessThanOrEqual(12)
+    for (const r of result) {
+      expect(r.exhausted).toBe(true)
+      expect(r.relaxed).toBe(true)
+      expect(r.relaxationLedger!.length).toBeLessThanOrEqual(3)
+      expect(r.relaxationLedger!.length).toBeGreaterThan(0)
+      expect(r.explanation!.missed.length).toBeGreaterThan(0)
+    }
   })
 
   it("returns [] when every laptop is inactive (relaxation + last resort both yield nothing)", () => {

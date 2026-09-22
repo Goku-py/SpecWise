@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { prisma } from "@/lib/prisma"
 import { updateLaptop } from "@/lib/db/catalog"
-import { alignRateLimitWindow, apiBase, bearerHeaders, getJson, uniqueIp, xffHeader } from "./helpers"
+import { alignRateLimitWindow, apiBase, bearerHeaders, getJson, uniqueIp } from "./helpers"
 
 interface PatchResponse {
   laptop: { id: string; notes: string | null }

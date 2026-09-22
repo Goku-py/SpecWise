@@ -1,21 +1,28 @@
 import type { Metadata, Viewport } from "next"
-import { DM_Sans } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { ThemeScript } from "@/components/theme/theme-toggle"
+import { BootSequenceWrapper } from "@/components/boot/boot-sequence-wrapper"
+import { prisma } from "@/lib/prisma"
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   display: "swap",
 })
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
-const SITE_TITLE = "SpecWise — Find the right laptop without learning every spec"
+const SITE_TITLE = "SpecWise — Match your workload to exact laptop hardware"
 const SITE_DESCRIPTION =
-  "Answer a few simple questions and get laptop recommendations based on your budget, workload, and preferences."
+  "Zero affiliate bias. Zero jargon. Match your workload to exact laptop hardware specs. F-score ranked recommendations based on real hardware data."
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -34,14 +41,11 @@ export const metadata: Metadata = {
   },
 }
 
-// Light/dark background tokens from src/app/globals.css.
+// Dark-only background token from src/app/globals.css.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0a09" },
-  ],
+  themeColor: "#090A0F",
 }
 
 // Statically serialized site-wide structured data (Organization + WebSite).
@@ -71,11 +75,21 @@ const siteJsonLd = {
   ],
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+async function getLaptopCount(): Promise<number> {
+  try {
+    return await prisma.laptop.count({ where: { status: "active" } })
+  } catch {
+    return 0
+  }
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const laptopCount = await getLaptopCount()
+
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col bg-background text-foreground selection:bg-accent selection:text-background">
@@ -83,7 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
-        <ThemeScript />
+        <BootSequenceWrapper laptopCount={laptopCount} />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

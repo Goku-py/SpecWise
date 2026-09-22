@@ -20,6 +20,8 @@ async function fetchActiveCatalog(region: string) {
           price: true,
           url: true,
           affiliateUrl: true,
+          inStock: true,
+          validUntil: true,
         },
         orderBy: { price: "asc" },
       },
@@ -49,6 +51,8 @@ async function fetchLaptopById(id: string) {
           price: true,
           url: true,
           affiliateUrl: true,
+          inStock: true,
+          validUntil: true,
         },
         orderBy: { price: "asc" },
       },
@@ -79,6 +83,8 @@ async function fetchLaptopBySlug(slug: string) {
           price: true,
           url: true,
           affiliateUrl: true,
+          inStock: true,
+          validUntil: true,
         },
         orderBy: { price: "asc" },
       },
@@ -104,15 +110,47 @@ export function invalidateCatalogCache() {
 
 export type CatalogEntry = Awaited<ReturnType<typeof fetchActiveCatalog>>[number]
 
+export interface OfferRow {
+  price: number
+  inStock: boolean
+  validUntil: Date | string | null
+}
+
+/**
+ * Phase 3 offer selection (pure, unit-tested): cheapest *valid* offer wins
+ * (in stock and unexpired). When no valid offer exists but stale rows do,
+ * the cheapest stale row is kept with `stale: true` — representable and
+ * explicit, never silently missing and never a fabricated zero. No rows at
+ * all yields `best: null` (caller flags priceMissing).
+ */
+export function pickBestOffer<T extends OfferRow>(
+  prices: readonly T[],
+  now: number = Date.now()
+): { best: T | null; stale: boolean } {
+  const isValid = (p: T): boolean => {
+    if (!p.inStock) return false
+    if (p.validUntil == null) return true
+    const t = p.validUntil instanceof Date ? p.validUntil.getTime() : new Date(p.validUntil).getTime()
+    return Number.isFinite(t) && t > now
+  }
+  // Sorted defensively: callers pass DB price-ascending rows, but the
+  // cheapest-valid contract must hold regardless of input order.
+  const ordered = [...prices].sort((a, b) => a.price - b.price)
+  const best = ordered.find(isValid) ?? ordered[0] ?? null
+  return { best, stale: best != null && !isValid(best) }
+}
+
 export function toScorable(l: CatalogEntry, region: string): ScorableLaptop {
   // Prices are already filtered by region and sorted by price at DB level
-  const best = l.prices[0]
+  const { best, stale } = pickBestOffer(l.prices)
   const retailers = l.prices.map(p => ({
     retailer: p.retailer,
     price: p.price,
     currency: p.currency,
     url: p.url,
     affiliateUrl: p.affiliateUrl,
+    inStock: p.inStock,
+    validUntil: p.validUntil?.toISOString() ?? null,
   }))
   return {
     id: l.id,
@@ -120,6 +158,10 @@ export function toScorable(l: CatalogEntry, region: string): ScorableLaptop {
     model: l.model,
     variant: l.variant,
     price: best?.price ?? 0,
+    // Phase 2G: missing price is flagged, never a zero-price advantage.
+    priceMissing: best == null,
+    // Phase 3: stale offer picked (out-of-stock or past validUntil).
+    priceStale: stale,
     currency: best?.currency ?? "USD",
     region: best?.region ?? region,
     url: best?.url ?? null,

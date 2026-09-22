@@ -54,11 +54,12 @@ model Laptop {
   keyboardBacklit   Boolean  @default(false)
   isTouchscreen     Boolean  @default(false)
   isRefurbished     Boolean  @default(false)
-  // slug is the new URL identity (SEO-friendly, stable). The DB column is
-  // intentionally NON-unique and nullable to keep migration risk low — uniqueness
-  // is enforced in application code (seed + future write layer) via slugify +
-  // collision suffixes. Backfill happens in the seed, not in SQL.
-  slug              String?
+  // slug is the URL identity (SEO-friendly, stable). Uniqueness is enforced
+  // by the database (@unique, phase 3) AND by the application write layer
+  // (slugify + collision suffixes) as a pre-check for friendly errors.
+  // Nullable: rows created before backfill may lack one; the write layer
+  // always sets it. Renames are tracked in SlugRedirect (308 chains).
+  slug              String?  @unique
   // Optional FK to Brand. Kept nullable + no required relation constraint so the
   // existing `brand String` display field can stay untouched (40+ consumers).
   brandId           String?
@@ -67,16 +68,34 @@ model Laptop {
   imageUrl          String?
   reviewScore       Float?
   notes             String?
+  // Provenance (phase 3): where this row came from and when the source last
+  // changed it. Supports freshness display and seed-vs-import auditing.
+  dataSource        String   @default("seed")
+  sourceUpdatedAt   DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   prices         LaptopPrice[]
   priceSnapshots PriceSnapshot[]
+  slugRedirects  SlugRedirect[]
 
   brandRef Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
-  @@index([slug])
+}
+
+// Phase 3: slug rename history. When a laptop's slug changes, the old slug is
+// recorded here so old URLs 308-redirect instead of 404ing. `from` is globally
+// unique: a slug never points at two laptops at once.
+model SlugRedirect {
+  id        String   @id @default(cuid())
+  from      String   @unique
+  laptopId  String
+  createdAt DateTime @default(now())
+
+  laptop Laptop @relation(fields: [laptopId], references: [id], onDelete: Cascade)
+
+  @@index([laptopId])
 }
 
 model LaptopPrice {
@@ -91,6 +110,11 @@ model LaptopPrice {
   price            Int
   url              String?
   affiliateUrl     String?
+  // Phase 3: offer state. inStock=false and expired validUntil rows remain
+  // representable (stale) but lose to valid rows in toScorable(); a laptop
+  // with no valid rows is priceMissing, never price 0.
+  inStock          Boolean   @default(true)
+  validUntil       DateTime?
   priceLastUpdated DateTime @default(now())
 
   laptop Laptop @relation(fields: [laptopId], references: [id], onDelete: Cascade)
@@ -129,12 +153,13 @@ model Lead {
 // phase2: brand master data. Laptop.brandId is optional — legacy rows keep the
 // denormalized `brand` string on Laptop until they are linked via the seed.
 model Brand {
-  id      String   @id @default(cuid())
-  name    String   @unique
-  slug    String   @unique
+  id      String @id @default(cuid())
+  name    String @unique
+  slug    String @unique
   logoUrl String?
 
-  laptops Laptop[]
+  laptops  Laptop[]
+  products Product[]
 }
 
 // phase2: retailer master data. `code` is the stable slug-style identifier used
@@ -165,4 +190,370 @@ model PriceSnapshot {
 
   @@index([laptopId, capturedAt])
   @@unique([laptopId, retailer, region, capturedAt])
+}
+
+// ── Product spine (phase 3 rehaul) ────────────────────────────────────────
+// Additive only: legacy Laptop / LaptopPrice stay as source of truth until
+// dual-write cutover. Category specs are 1:1; exactly one should be populated
+// per Product row (enforced in the write layer, not CHECK constraints yet).
+// Sync src/lib/validation/product.ts whenever an enum changes here.
+
+enum Category {
+  LAPTOP
+  CPU
+  GPU
+  MOTHERBOARD
+  RAM
+  PSU
+}
+
+enum GpuType {
+  INTEGRATED
+  DEDICATED
+  HYBRID
+}
+
+enum RamDimmType {
+  DDR4
+  DDR5
+  LPDDR4X
+  LPDDR5
+  LPDDR5X
+}
+
+enum PsuModularity {
+  NON_MODULAR
+  SEMI_MODULAR
+  FULL_MODULAR
+}
+
+enum EfficiencyRating {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  TITANIUM
+}
+
+enum MoboFormFactor {
+  ATX
+  MICRO_ATX
+  MINI_ITX
+  E_ATX
+}
+
+enum WireStandard {
+  WIFI_6
+  WIFI_6E
+  WIFI_7
+  BLUETOOTH_5_2
+  BLUETOOTH_5_3
+  BLUETOOTH_5_4
+}
+
+enum PortKind {
+  USB_A
+  USB_C
+  USB4
+  THUNDERBOLT_3
+  THUNDERBOLT_4
+  THUNDERBOLT_5
+  HDMI_2_0
+  HDMI_2_1
+  DISPLAYPORT_1_4
+  DISPLAYPORT_2_1
+  RJ45
+  AUDIO_JACK
+  SD_CARD
+  M_2
+  PCIE_X16
+  PCIE_X4
+  SATA
+  POWER_C14
+  OTHER
+}
+
+enum SecurityFeature {
+  FINGERPRINT
+  TPM_2_0
+  IR_CAM
+  KENSINGTON
+  SMART_CARD
+  OTHER
+}
+
+enum DatasourceKind {
+  seed
+  import
+  partner
+  manual
+}
+
+model Product {
+  id              String        @id @default(cuid())
+  category        Category
+  brandId         String
+  // Denormalized display label; drop after read models use brand.name only.
+  brandLabel      String
+  name            String
+  variant         String?
+  slug            String        @unique
+  status          Status        @default(active)
+  isPopular       Boolean       @default(false)
+  imageUrl        String?
+  reviewScore     Float?
+  notes           String?
+  dataSource      DatasourceKind @default(seed)
+  sourceUpdatedAt DateTime?
+  // Dual-write link to legacy Laptop.id (deterministic seed IDs). Unique so
+  // re-running backfill upserts the same spine row.
+  legacyLaptopId  String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  brand         Brand          @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  prices        ProductPrice[]
+  snapshots     SpinePriceSnapshot[]
+  slugRedirects SpineSlugRedirect[]
+
+  laptop      LaptopSpec?
+  cpu         CpuSpec?
+  gpu         GpuSpec?
+  motherboard MotherboardSpec?
+  ram         RamSpec?
+  psu         PsuSpec?
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([brandId, status])
+  @@index([category, status])
+  @@index([isPopular])
+}
+
+model SpineSlugRedirect {
+  id        String   @id @default(cuid())
+  from      String   @unique
+  productId String
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// Unified pricing for the spine — ALWAYS minor units (e.g. 109900 = $1,099.00).
+// Distinct from legacy LaptopPrice.price (major units) and PriceSnapshot.priceCents.
+model ProductPrice {
+  productId    String
+  region       String
+  retailer     String
+  currency     String
+  priceMinor   Int
+  url          String?
+  affiliateUrl String?
+  inStock      Boolean    @default(true)
+  validUntil   DateTime?
+  updatedAt    DateTime   @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, region, retailer])
+  @@index([region, currency, priceMinor])
+  @@index([retailer])
+}
+
+model SpinePriceSnapshot {
+  id         String   @id @default(cuid())
+  productId  String
+  retailer   String
+  region     String
+  currency   String
+  priceMinor Int
+  inStock    Boolean  @default(true)
+  capturedAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, capturedAt])
+  @@unique([productId, retailer, region, capturedAt])
+}
+
+// Extend Brand with spine products (legacy laptops stay on Brand.laptops).
+// model Brand already exists — relation added below via extra field on Brand.
+
+model LaptopSpec {
+  productId String @id
+  os        String
+
+  // Optional links to shared component products (future CPU/GPU catalog rows).
+  cpuProductId String?
+  gpuProductId String?
+
+  cpuBrand        String
+  cpuFamily       String
+  cpuGeneration   String?
+  cpuCores        Int?
+  cpuThreads      Int?
+  cpuBenchmark    Int?
+  benchmarkSource String?
+
+  gpuType   GpuType @default(INTEGRATED)
+  gpuModel  String?
+  gpuVRAMGb Int?
+  gpuTgpW   Int?
+
+  ramAmountGb     Int
+  ramType         RamDimmType?
+  ramUpgradeable  Boolean       @default(false)
+
+  storageAmountGb   Int
+  storageType       String       @default("SSD")
+  storageExpandable Boolean      @default(false)
+
+  displaySizeIn    Float
+  displayWidthPx   Int?
+  displayHeightPx  Int?
+  displayRefreshHz Int           @default(60)
+  displayPanelType String?
+  displayNits      Int?
+  displayGamut     String?
+  // Single touch flag — merged from legacy displayTouch OR isTouchscreen.
+  displayTouch     Boolean       @default(false)
+
+  batteryWh     Int?
+  batteryLifeHr Int?
+
+  weightKg        Float?
+  buildMaterial   String?
+  webcam          String?
+  keyboardBacklit Boolean       @default(false)
+
+  ports    LaptopPort[]
+  wires    LaptopWireless[]
+  security LaptopSecurity[]
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([cpuBrand])
+  @@index([ramAmountGb])
+  @@index([gpuType])
+  @@index([displaySizeIn])
+  @@index([storageAmountGb])
+}
+
+model LaptopPort {
+  laptopId String
+  kind     PortKind
+  count    Int      @default(1)
+  // Original free-text when kind=OTHER ("" when unused). Required: part of PK.
+  label    String   @default("")
+
+  spec LaptopSpec @relation(fields: [laptopId], references: [productId], onDelete: Cascade)
+
+  @@id([laptopId, kind, label])
+}
+
+model LaptopWireless {
+  laptopId String
+  wire     WireStandard
+
+  spec LaptopSpec @relation(fields: [laptopId], references: [productId], onDelete: Cascade)
+
+  @@id([laptopId, wire])
+}
+
+model LaptopSecurity {
+  laptopId String
+  feature  SecurityFeature
+  // Original free-text when feature=OTHER ("" when unused). Required: part of PK.
+  label    String   @default("")
+
+  spec LaptopSpec @relation(fields: [laptopId], references: [productId], onDelete: Cascade)
+
+  @@id([laptopId, feature, label])
+}
+
+model CpuSpec {
+  productId       String  @id
+  socket          String?
+  cores           Int
+  threads         Int?
+  baseClockMHz    Int?
+  boostClockMHz   Int?
+  tdpW            Int?
+  igpuModel       String?
+  benchmark       Int?
+  benchmarkSource String?
+  generation      String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([socket])
+  @@index([cores])
+}
+
+model GpuSpec {
+  productId       String  @id
+  chipset          String
+  vramGb           Int?
+  vramType         String?
+  tgpW             Int?
+  computeUnits     Int?
+  rtUnits          Int?
+  busWidthBit      Int?
+  benchmark        Int?
+  benchmarkSource  String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([chipset])
+  @@index([vramGb])
+}
+
+model MotherboardSpec {
+  productId    String  @id
+  formFactor   MoboFormFactor
+  chipset      String?
+  socket       String?
+  memoryType   RamDimmType?
+  memorySlots  Int?
+  memoryMaxGb  Int?
+  m2Slots      Int?
+  pcieVersion  String?
+  wifiIncluded Boolean @default(false)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([formFactor])
+  @@index([socket])
+}
+
+model RamSpec {
+  productId  String  @id
+  capacityGb Int
+  dimmType   RamDimmType
+  speedMHz   Int?
+  casLatency Int?
+  modules    Int     @default(1)
+  channels   Int?
+  xmpExpo    Boolean @default(false)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([dimmType, capacityGb])
+  @@index([speedMHz])
+}
+
+model PsuSpec {
+  productId    String          @id
+  wattage      Int
+  efficiency   EfficiencyRating?
+  modularity   PsuModularity   @default(NON_MODULAR)
+  formFactor   String?
+  pcie12vhpwr  Boolean         @default(false)
+  fanless      Boolean         @default(false)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([wattage])
+  @@index([efficiency])
 }

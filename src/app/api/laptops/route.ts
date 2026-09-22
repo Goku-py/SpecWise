@@ -3,8 +3,9 @@ import { withLogging } from "@/lib/logger"
 import { prisma } from "@/lib/prisma"
 import { verifyAdminApiKey } from "@/lib/admin-auth"
 import { getClientIP, checkRateLimit } from "@/lib/rate-limit"
+import { isSupportedRegion } from "@/lib/regions"
 
-export const GET = withLogging(async (request, rid) => {
+export const GET = withLogging(async (request) => {
     // Rate limit: 60 requests/minute/IP
     const ip = getClientIP(request)
     const rateLimit = await checkRateLimit(`get-laptops:${ip}`, 60, 60)
@@ -27,6 +28,10 @@ export const GET = withLogging(async (request, rid) => {
         { error: "Missing required query param: region" },
         { status: 400 }
       )
+    }
+    // Phase 3: unknown regions 400 — never silently fall back to another region.
+    if (!isSupportedRegion(region)) {
+      return NextResponse.json({ error: "Unsupported region" }, { status: 400 })
     }
 
     const page = Math.max(1, Number(searchParams.get("page") ?? "1"))

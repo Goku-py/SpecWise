@@ -5,61 +5,65 @@ import type { UseCase } from "@/lib/types"
 import { catalogById, catalogLaptops } from "./fixtures/catalog"
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Golden baseline: top-3 (id, matchScore) per use case over the full 56-laptop
-// catalog with defaultQuizAnswers + useCase. Captured from a throwaway tsx run
-// on 2026-08-03 (scripts/golden-top3.ts, deleted). Sorting is stable, so ties
-// resolve by catalog order and these values are deterministic.
+// Golden baseline v2 (Phase 2, engine v2.phase2 / weights v1).
+// INTENTIONAL CHANGE from the 2026-08-03 baseline: the old F-score ranked
+// gaming laptops (Zephyrus G16, Stealth 16) #1 for student/office/travel —
+// poor recommendations. The v2 engine (value dim + calibrated weights)
+// ranks affordable portable laptops there instead. Re-captured 2026-09-22
+// after the dense-ranking value fix (identical prices share one value cap).
+// Sorting is fully deterministic (score → price → weight → id).
+// Sorting is fully deterministic (score → price → weight → id).
 // ─────────────────────────────────────────────────────────────────────────────
 const GOLDEN_TOP3: Readonly<Record<UseCase, ReadonlyArray<{ id: string; score: number }>>> = {
   student: [
-    { id: "ASUS-ROG Zephyrus G16", score: 94 },
-    { id: "MSI-Stealth 16 Studio", score: 94 },
-    { id: "MSI-Stealth 14 Studio", score: 93 },
+    { id: "Lenovo-IdeaPad Slim 5-14", score: 88 },
+    { id: "Samsung-Galaxy Book4 Pro-14", score: 85 },
+    { id: "Microsoft-Surface Laptop 7-13.8", score: 85 },
   ],
   office: [
-    { id: "ASUS-ROG Zephyrus G16", score: 94 },
-    { id: "MSI-Stealth 16 Studio", score: 94 },
-    { id: "MSI-Stealth 14 Studio", score: 93 },
+    { id: "Lenovo-IdeaPad Slim 5-14", score: 86 },
+    { id: "HP-Envy 16", score: 85 },
+    { id: "Samsung-Galaxy Book4 Pro-14", score: 85 },
   ],
   coding: [
-    { id: "ASUS-ROG Zephyrus G16", score: 96 },
-    { id: "MSI-Stealth 16 Studio", score: 96 },
-    { id: "Samsung-Galaxy Book4 Ultra", score: 95 },
+    { id: "MSI-Stealth 16 Studio", score: 91 },
+    { id: "ASUS-ROG Zephyrus G16", score: 89 },
+    { id: "MSI-Stealth 14 Studio", score: 89 },
   ],
   gaming: [
-    { id: "ASUS-ROG Strix Scar 17", score: 98 },
-    { id: "Razer-Blade 16", score: 97 },
-    { id: "ASUS-ROG Zephyrus G16", score: 95 },
+    { id: "Razer-Blade 16", score: 94 },
+    { id: "Lenovo-Legion 7i-16", score: 92 },
+    { id: "HP-OMEN 16", score: 91 },
   ],
   "video-editing": [
-    { id: "ASUS-ROG Strix Scar 17", score: 97 },
-    { id: "Razer-Blade 16", score: 97 },
-    { id: "ASUS-ROG Zephyrus G16", score: 96 },
+    { id: "Razer-Blade 16", score: 94 },
+    { id: "MSI-Stealth 16 Studio", score: 93 },
+    { id: "Lenovo-Legion 7i-16", score: 92 },
   ],
   "graphic-design": [
-    { id: "ASUS-ROG Zephyrus G16", score: 96 },
+    { id: "Razer-Blade 16", score: 93 },
+    { id: "ASUS-ROG Zephyrus G16", score: 92 },
+    { id: "Lenovo-Legion 7i-16", score: 91 },
+  ],
+  travel: [
+    { id: "Samsung-Galaxy Book4 Pro-14", score: 89 },
+    { id: "Microsoft-Surface Laptop 7-13.8-1TB", score: 89 },
+    { id: "Lenovo-IdeaPad Slim 5-14", score: 89 },
+  ],
+  general: [
+    { id: "Samsung-Galaxy Book4 Pro-14", score: 86 },
+    { id: "Lenovo-IdeaPad Slim 5-14", score: 86 },
+    { id: "Microsoft-Surface Laptop 7-13.8-1TB", score: 86 },
+  ],
+  "ai-ml": [
+    { id: "Razer-Blade 16", score: 98 },
     { id: "ASUS-ROG Strix Scar 17", score: 96 },
     { id: "MSI-Stealth 16 Studio", score: 96 },
   ],
-  travel: [
-    { id: "ASUS-ROG Zephyrus G16", score: 92 },
-    { id: "MSI-Stealth 16 Studio", score: 92 },
-    { id: "Samsung-Galaxy Book4 Ultra", score: 92 },
-  ],
-  general: [
-    { id: "ASUS-ROG Zephyrus G16", score: 95 },
-    { id: "MSI-Stealth 16 Studio", score: 95 },
-    { id: "MSI-Stealth 14 Studio", score: 94 },
-  ],
-  "ai-ml": [
-    { id: "ASUS-ROG Strix Scar 17", score: 98 },
-    { id: "Razer-Blade 16", score: 98 },
-    { id: "ASUS-ROG Zephyrus G16", score: 95 },
-  ],
   mixed: [
-    { id: "ASUS-ROG Zephyrus G16", score: 96 },
-    { id: "MSI-Stealth 16 Studio", score: 96 },
-    { id: "ASUS-ROG Strix Scar 17", score: 93 },
+    { id: "MSI-Stealth 14 Studio", score: 88 },
+    { id: "MSI-Stealth 16 Studio", score: 88 },
+    { id: "HP-Envy 16", score: 87 },
   ],
 }
 

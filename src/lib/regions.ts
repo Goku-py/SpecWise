@@ -18,6 +18,17 @@ export const REGIONS: RegionConfig[] = [
 
 export const REGION_CODES = REGIONS.map(r => r.code)
 
+/** Phase 3: strict allowlist. Unknown regions must 400, never silently fall back. */
+export function isSupportedRegion(code: unknown): code is string {
+  return typeof code === "string" && REGION_CODES.includes(code.toUpperCase());
+}
+
+/** Normalized (uppercase) region, or null when unsupported. */
+export function normalizeRegion(code: unknown): string | null {
+  if (!isSupportedRegion(code)) return null;
+  return (code as string).toUpperCase();
+}
+
 export function getRegion(code: string): RegionConfig {
   return REGIONS.find(r => r.code === code) ?? REGIONS[0]
 }

@@ -19,6 +19,18 @@ export function getClientIP(request: Request): string {
   return "unknown"
 }
 
+/**
+ * Deterministic retention seam (Phase 3): deletes RateLimit rows older than
+ * `olderThanHours`. Called opportunistically from checkRateLimit; exported
+ * for direct testing.
+ */
+export async function pruneRateLimits(olderThanHours = 24): Promise<number> {
+  const deleted = await prisma.$executeRaw`
+    DELETE FROM "RateLimit"
+    WHERE "updatedAt" < now() - (${olderThanHours}::int * interval '1 hour')`
+  return Number(deleted)
+}
+
 export async function checkRateLimit(
   identifier: string,
   limit: number,
@@ -45,7 +57,7 @@ export async function checkRateLimit(
     // ~1 in 50 calls prunes rows older than 24h; failures are non-fatal.
     if (Math.random() < 0.02) {
       try {
-        await prisma.$executeRaw`DELETE FROM "RateLimit" WHERE "updatedAt" < now() - interval '1 day'`
+        await pruneRateLimits(24)
       } catch (error) {
         console.error("Rate limit cleanup error (non-fatal):", error)
       }

@@ -15,10 +15,10 @@ export const LaptopCard = memo(function LaptopCard({ laptop, priority }: { lapto
   return (
     <Link
       href={href}
-      className="group animate-fade-in block rounded-xl border border-border bg-card p-5 transition-all hover:border-accent/20 hover:bg-card-hover hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group animate-fade-in block rounded border border-border bg-card p-5 transition-all hover:border-accent/20 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {/* Image */}
-      <div className="mb-4 flex h-32 items-center justify-center rounded-xl border border-border/50 bg-background/50">
+      <div className="mb-4 flex h-32 items-center justify-center rounded border border-border bg-background">
         <ProductImage
           src={laptop.imageUrl}
           alt={`${laptop.brand} ${laptop.model}`}
@@ -32,21 +32,21 @@ export const LaptopCard = memo(function LaptopCard({ laptop, priority }: { lapto
       {/* Brand + Model */}
       <div className="mb-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-semibold text-foreground">
+          <h3 className="text-sm font-semibold text-foreground">
             {laptop.brand} {laptop.model}
             {laptop.variant && <span className="text-muted"> ({laptop.variant})</span>}
           </h3>
           {laptop.isPopular && (
-            <span className="shrink-0 rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+            <span className="shrink-0 rounded border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
               Popular
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-xs text-muted">{laptop.os}</p>
+        <p className="mt-0.5 font-mono text-[10px] text-muted">{laptop.os}</p>
       </div>
 
       {/* Key Specs */}
-      <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-muted">
+      <div className="mb-3 grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[10px] text-muted">
         <div className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{laptop.cpuBrand} {laptop.cpuFamily}</span>
@@ -69,7 +69,7 @@ export const LaptopCard = memo(function LaptopCard({ laptop, priority }: { lapto
       <div className="flex items-center justify-between border-t border-border pt-3">
         <div>
           {laptop.price != null ? (
-            <span className="text-lg font-bold text-foreground">{formatPrice(laptop.price, laptop.currency)}</span>
+            <span className="font-mono text-sm font-bold text-foreground">{formatPrice(laptop.price, laptop.currency)}</span>
           ) : (
             <span className="text-xs text-muted">Price unavailable</span>
           )}
@@ -82,8 +82,8 @@ export const LaptopCard = memo(function LaptopCard({ laptop, priority }: { lapto
 
 export function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-xl border border-border bg-card p-5">
-      <div className="mb-4 h-32 rounded-xl bg-card-hover" />
+    <div className="animate-pulse rounded border border-border bg-card p-5">
+      <div className="mb-4 h-32 rounded bg-card-hover" />
       <div className="mb-3 space-y-2">
         <div className="h-4 w-3/4 rounded bg-card-hover" />
         <div className="h-3 w-1/2 rounded bg-card-hover" />

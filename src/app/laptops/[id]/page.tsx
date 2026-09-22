@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { cookies } from "next/headers"
 import { notFound, permanentRedirect } from "next/navigation"
 import {
   ArrowLeft,
@@ -20,6 +21,10 @@ import {
   type DetailPriceRow,
 } from "@/components/product/detail-pricing"
 import { getActiveCatalog, getLaptopById, getLaptopBySlug } from "@/lib/catalog-cache"
+import { canonicalComparisonPath } from "@/lib/compare-pairs"
+import { normalizeRegion } from "@/lib/regions"
+import { REGION_COOKIE } from "@/middleware"
+import { ExplorerWrapper } from "@/components/laptop/explorer-wrapper"
 import type { LaptopDetail, PriceEntry } from "@/lib/types"
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -49,6 +54,19 @@ async function resolveLaptop(rawSegment: string) {
   return { laptop: byId, matchedLegacyId: true }
 }
 
+/**
+ * Phase 3: old slug -> current slug URL path, or null. Single hop straight
+ * to the laptop's CURRENT slug, so stale chains can never cycle.
+ */
+async function findSlugRedirectTarget(rawId: string): Promise<string | null> {
+  const redirect = await prisma.slugRedirect.findUnique({
+    where: { from: decodeURIComponent(rawId) },
+    include: { laptop: { select: { slug: true, id: true } } },
+  })
+  if (!redirect) return null
+  return `/laptops/${redirect.laptop.slug ?? redirect.laptop.id}`
+}
+
 function specSummary(laptop: LaptopDetail): string {
   const parts = [
     laptop.displaySize ? `${laptop.displaySize}" display` : null,
@@ -66,10 +84,17 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id: rawId } = await params
-  // Metadata for legacy-id hits renders fine without redirecting — the body of
-  // the page performs the 308 redirect to the slug URL.
-  const { laptop } = await resolveLaptop(rawId)
-  if (!laptop) return { title: "Laptop not found" }
+  // Redirects fire here (pre-stream) so stale URLs answer with a real HTTP
+  // 308. Redirects thrown from the page body degrade to 200 + client-side
+  // navigation once loading.tsx has streamed (verified 2026-09-22); the body
+  // keeps the same checks as fallback.
+  const { laptop, matchedLegacyId } = await resolveLaptop(rawId)
+  if (!laptop) {
+    const target = await findSlugRedirectTarget(rawId)
+    if (target) permanentRedirect(target)
+    return { title: "Laptop not found" }
+  }
+  if (matchedLegacyId && laptop.slug) permanentRedirect(`/laptops/${laptop.slug}`)
 
   const title = `${laptop.brand} ${laptop.model}${laptop.variant ? ` (${laptop.variant})` : ""}`
   const specs = specSummary(laptop)
@@ -94,16 +119,36 @@ interface ProductJsonLd {
     priceCurrency: string
     price: number
     availability: string
+    priceValidUntil?: string
   }
 }
 
-// Deterministic, region-agnostic (pages are statically rendered), so it must
-// not read the request cookie region — prices across all regions are considered.
-function buildProductJsonLd(laptop: LaptopDetail): ProductJsonLd {
-  const lowestPrice = laptop.prices.reduce<PriceEntry | null>(
-    (min, p) => (min === null || p.price < min.price ? p : min),
-    null
-  )
+/** Phase 3: an offer counts as current when in stock and unexpired. */
+function isCurrentOffer(
+  p: Pick<PriceEntry, "inStock" | "validUntil">,
+  now: number
+): boolean {
+  if (p.inStock === false) return false
+  if (p.validUntil == null) return true
+  return new Date(p.validUntil).getTime() > now
+}
+
+// Phase 3, region-consistent: JSON-LD is built from the SAME region-filtered
+// rows the visible UI prices (DetailPricingTable filters by cookie region
+// client-side). Never lowest-across-regions, never hardcoded availability.
+function buildProductJsonLd(laptop: LaptopDetail, region: string): ProductJsonLd {
+  const now = Date.now()
+  const regional = laptop.prices.filter(p => p.region === region)
+  const current = regional.filter(p => isCurrentOffer(p, now))
+  // Prefer the cheapest current offer; fall back to the cheapest regional row
+  // with explicit (possibly out-of-stock) availability. No regional rows at
+  // all: omit offers rather than borrowing another region's price.
+  const pick =
+    (current.length > 0 ? current : regional)
+      .reduce<PriceEntry | null>(
+        (min, p) => (min === null || p.price < min.price ? p : min),
+        null
+      )
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -115,34 +160,68 @@ function buildProductJsonLd(laptop: LaptopDetail): ProductJsonLd {
     // the encoded legacy id only if the slug was never backfilled.
     url: new URL(`/laptops/${laptop.slug ?? encodeURIComponent(laptop.id)}`, BASE_URL).toString(),
     ...(laptop.imageUrl ? { image: laptop.imageUrl } : {}),
-    ...(lowestPrice
+    ...(pick
       ? {
           offers: {
             "@type": "Offer",
-            priceCurrency: lowestPrice.currency,
-            price: lowestPrice.price,
-            availability: "https://schema.org/InStock",
+            priceCurrency: pick.currency,
+            price: pick.price,
+            availability:
+              pick.inStock === false
+                ? "https://schema.org/OutOfStock"
+                : "https://schema.org/InStock",
+            ...(pick.validUntil
+              ? { priceValidUntil: new Date(pick.validUntil).toISOString().slice(0, 10) }
+              : {}),
           },
         }
       : {}),
   }
 }
 
+interface RivalRow {
+  id: string
+  slug: string | null
+  brand: string
+  model: string
+  displaySize: number
+  gpuType: string
+}
+
+/**
+ * Internal-linking hierarchy: the most similar active laptops (same graphics
+ * class first, then closest screen size). Returns rows that have a slug, so
+ * every link maps to a canonical /compare/<a>-vs-<b> route.
+ */
+function pickRivals(
+  current: LaptopDetail,
+  rows: RivalRow[],
+  limit = 3
+): Array<RivalRow & { slug: string }> {
+  const sameGpu = (gpuType: string) => gpuType.toLowerCase() === current.gpuType.toLowerCase()
+  const rank = (row: RivalRow) =>
+    (sameGpu(row.gpuType) ? 2 : 0) - Math.abs(row.displaySize - current.displaySize)
+  return rows
+    .filter((row): row is RivalRow & { slug: string } => Boolean(row.slug) && row.id !== current.id)
+    .sort((a, b) => rank(b) - rank(a) || a.model.localeCompare(b.model))
+    .slice(0, limit)
+}
+
 function SpecRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-border py-2.5 text-sm">
       <span className="shrink-0 text-muted">{label}</span>
-      <span className="text-right font-medium text-foreground">{children}</span>
+      <span className="font-mono text-right text-xs font-medium text-foreground">{children}</span>
     </div>
   )
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
-    <div className="animate-fade-in rounded-xl border border-border bg-card p-5 sm:p-6">
+    <div className="animate-fade-in rounded border border-border bg-card p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-2">
         <Icon className="h-5 w-5 text-accent" />
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 className="font-mono text-xs font-semibold uppercase tracking-wider text-muted">{title}</h2>
       </div>
       <div className="space-y-0">{children}</div>
     </div>
@@ -156,12 +235,21 @@ export default async function LaptopDetailPage({
 }) {
   const { id: rawId } = await params
   const { laptop: raw, matchedLegacyId } = await resolveLaptop(rawId)
-  if (!raw) notFound()
+  if (!raw) {
+    // Fallback duplicate of the metadata redirect (see above).
+    const target = await findSlugRedirectTarget(rawId)
+    if (target) permanentRedirect(target)
+    notFound()
+  }
   // Legacy-id hit with a slug available: 308-permanent redirect to the new URL
   // identity so search engines converge on one canonical URL (permanentRedirect
   // serves HTTP 308 in Server Components).
   if (matchedLegacyId && raw.slug) permanentRedirect(`/laptops/${raw.slug}`)
   const laptop: LaptopDetail = raw
+  // Phase 3: the request region drives JSON-LD so structured data prices the
+  // same region the visible UI prices (DetailPricingTable filters by cookie).
+  const cookieStore = await cookies()
+  const region = normalizeRegion(cookieStore.get(REGION_COOKIE)?.value) ?? "US"
 
   // Phase 2c: resolve each retailer row's purchase href server-side. Retailer
   // master data is fetched once per render (6 rows, cheap); the href chain is
@@ -204,11 +292,29 @@ export default async function LaptopDetailPage({
     href: buyHrefs.get(`${p.retailer}-${p.region}`) ?? null,
   }))
 
+  // Internal linking for the programmatic comparison routes: pick similar
+  // active laptops and link to their canonical /compare/<a>-vs-<b> pages.
+  const currentSlug = laptop.slug
+  const rivalRows = currentSlug
+    ? await prisma.laptop.findMany({
+        where: { status: "active", id: { not: laptop.id } },
+        select: { id: true, slug: true, brand: true, model: true, displaySize: true, gpuType: true },
+        take: 60,
+      })
+    : []
+  const comparisonLinks = currentSlug
+    ? pickRivals(laptop, rivalRows).map(r => ({
+        id: r.id,
+        href: canonicalComparisonPath(currentSlug, r.slug),
+        label: `${r.brand} ${r.model}`,
+      }))
+    : []
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildProductJsonLd(laptop)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildProductJsonLd(laptop, region)) }}
       />
       {/* Back link */}
       <Link
@@ -230,12 +336,12 @@ export default async function LaptopDetailPage({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {laptop.isPopular && (
-              <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent">
+              <span className="rounded bg-accent-soft px-3 py-1 text-xs font-medium text-accent">
                 Popular
               </span>
             )}
             {laptop.reviewScore != null && (
-              <span className="flex items-center gap-1 rounded-full bg-card-hover px-3 py-1 text-xs font-medium text-foreground">
+              <span className="flex items-center gap-1 rounded bg-card-hover px-3 py-1 text-xs font-medium text-foreground">
                 <Star className="h-3.5 w-3.5 text-yellow-500" />
                 {laptop.reviewScore.toFixed(1)}
               </span>
@@ -250,7 +356,7 @@ export default async function LaptopDetailPage({
       </div>
 
       {/* Image — LCP element, so mark priority (never lazy) */}
-      <div className="mb-8 flex items-center justify-center rounded-xl border border-border bg-card p-8">
+      <div className="mb-8 flex items-center justify-center rounded border border-border bg-card p-8">
         <ProductImage
           src={laptop.imageUrl}
           alt={`${laptop.brand} ${laptop.model}`}
@@ -259,6 +365,11 @@ export default async function LaptopDetailPage({
           priority
           className="max-h-64 object-contain"
         />
+      </div>
+
+      {/* Hardware Explorer — lazy client island */}
+      <div className="mb-8">
+        <ExplorerWrapper laptop={laptop} />
       </div>
 
       {/* Spec sections grid */}
@@ -334,6 +445,33 @@ export default async function LaptopDetailPage({
 
       {/* Pricing by retailer — scoped to the visitor's selected region */}
       <DetailPricingTable rows={priceRows} />
+
+      {/* Internal linking into the programmatic comparison routes */}
+      {comparisonLinks.length > 0 && (
+        <section
+          aria-labelledby="compare-similar-devices"
+          className="mt-8 animate-fade-in rounded border border-border bg-card p-5 sm:p-6"
+        >
+          <h2 id="compare-similar-devices" className="mb-1 text-base font-semibold text-foreground">
+            Compare with similar devices
+          </h2>
+          <p className="mb-4 text-xs text-muted">
+            Side-by-side specs, battery, and regional prices.
+          </p>
+          <ul className="space-y-2">
+            {comparisonLinks.map(r => (
+              <li key={r.id}>
+                <Link
+                  href={r.href}
+                  className="text-sm text-accent transition hover:underline"
+                >
+                  {laptop.brand} {laptop.model} vs {r.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

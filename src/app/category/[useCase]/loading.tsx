@@ -1,7 +1,7 @@
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-xl border border-border bg-card p-5">
-      <div className="mb-4 h-32 rounded-xl bg-card-hover" />
+    <div className="animate-pulse rounded border border-border bg-card p-5">
+      <div className="mb-4 h-32 rounded bg-card-hover" />
       <div className="mb-3 space-y-2">
         <div className="h-4 w-3/4 rounded bg-card-hover" />
         <div className="h-3 w-1/2 rounded bg-card-hover" />

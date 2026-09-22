@@ -105,8 +105,8 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
   const maxPct = pct(valueMax)
 
   const inputFieldClass =
-    "w-full rounded-lg border bg-background px-3 py-2.5 text-center text-base font-semibold " +
-    "text-foreground outline-none transition placeholder:text-muted " +
+    "w-full rounded border bg-background px-3 py-2.5 text-center text-base font-semibold " +
+    "text-foreground outline-none transition placeholder:text-muted font-mono " +
     "focus:border-accent/50"
 
   return (
@@ -147,7 +147,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
         {/* Editable input fields */}
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="flex-1">
-            <div className="mb-1 text-center text-[10px] uppercase tracking-wider text-muted">Min</div>
+            <div className="mb-1 text-center text-[10px] uppercase tracking-wider text-muted font-mono">Min</div>
             <input
               type="text"
               inputMode="numeric"
@@ -156,14 +156,14 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
               onBlur={() => commitMin(minText)}
               onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               placeholder={formatLabel ? formatLabel(min) : String(min)}
-              className={`${inputFieldClass} ${minErr ? "border-red-500/50" : "border-border"}`}
+              className={`${inputFieldClass} ${minErr ? "border-accent-danger/50" : "border-border"}`}
               aria-label="Minimum budget"
             />
-            {minErr && <p className="mt-1 text-center text-[11px] text-red-400">{minErr}</p>}
+            {minErr && <p className="mt-1 text-center text-[11px] text-accent-danger">{minErr}</p>}
           </div>
-          <div className="mt-5 text-xs text-muted">—</div>
+          <div className="mt-5 text-xs text-muted">&mdash;</div>
           <div className="flex-1">
-            <div className="mb-1 text-center text-[10px] uppercase tracking-wider text-muted">Max</div>
+            <div className="mb-1 text-center text-[10px] uppercase tracking-wider text-muted font-mono">Max</div>
             <input
               type="text"
               inputMode="numeric"
@@ -172,10 +172,10 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
               onBlur={() => commitMax(maxText)}
               onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
               placeholder={formatLabel ? formatLabel(max) : String(max)}
-              className={`${inputFieldClass} ${maxErr ? "border-red-500/50" : "border-border"}`}
+              className={`${inputFieldClass} ${maxErr ? "border-accent-danger/50" : "border-border"}`}
               aria-label="Maximum budget"
             />
-            {maxErr && <p className="mt-1 text-center text-[11px] text-red-400">{maxErr}</p>}
+            {maxErr && <p className="mt-1 text-center text-[11px] text-accent-danger">{maxErr}</p>}
           </div>
         </div>
 
@@ -209,7 +209,7 @@ export function RangeSlider({ min, max, step, valueMin, valueMax, onChange, form
         </div>
 
         {/* Endpoints */}
-        <div className="mt-1 flex justify-between px-0.5 text-[10px] text-muted">
+        <div className="mt-1 flex justify-between px-0.5 text-[10px] text-muted font-mono">
           <span>{formatLabel ? formatLabel(min) : min}</span>
           <span>{formatLabel ? formatLabel(max) : max}</span>
         </div>

@@ -90,11 +90,11 @@ export function RegionPicker({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="Select region"
-        className="flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-card hover:text-foreground"
+        className="flex min-h-10 items-center gap-1.5 rounded px-2.5 py-1.5 text-sm text-muted transition hover:bg-card hover:text-foreground"
       >
         <span aria-hidden="true">{selected.flag}</span>
-        <span>{selected.code}</span>
-        {currency && <span className="text-muted">({currency.symbol})</span>}
+        <span className="font-mono text-xs">{selected.code}</span>
+        {currency && <span className="text-muted text-xs">({currency.symbol})</span>}
       </button>
       {open && (
         <div
@@ -102,7 +102,7 @@ export function RegionPicker({
           role="listbox"
           aria-label="Available regions"
           className={cn(
-            "absolute right-0 z-50 w-48 rounded-xl border border-border bg-card p-1 shadow-xl",
+            "absolute right-0 z-50 w-48 rounded border border-border bg-card p-1 shadow-xl",
             placement === "top" ? "bottom-full mb-1" : "top-full mt-1"
           )}
         >
@@ -114,7 +114,7 @@ export function RegionPicker({
               tabIndex={-1}
               data-index={i}
               onClick={() => select(r.code)}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+              className={`flex w-full items-center gap-2 rounded px-3 py-2 text-sm transition ${
                 selected.code === r.code
                   ? "bg-accent/10 text-accent"
                   : "text-muted hover:bg-card-hover hover:text-foreground"

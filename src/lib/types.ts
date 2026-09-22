@@ -73,6 +73,9 @@ export interface RetailerPrice {
   currency: string
   url: string | null
   affiliateUrl: string | null
+  /** Phase 3: offer state, passed through for stale-explicit UI/JSON-LD. */
+  inStock?: boolean
+  validUntil?: string | null
 }
 
 // Catalog card DTO — shared by the server-rendered /laptops grid and the
@@ -113,6 +116,9 @@ export interface PriceEntry {
   price: number
   url: string | null
   affiliateUrl: string | null
+  /** Phase 3: offer state (present when selected with the new fields). */
+  inStock?: boolean
+  validUntil?: Date | string | null
 }
 
 // Full laptop detail DTO — rendered by the server component at /laptops/[id].
@@ -199,6 +205,35 @@ export interface RecommendedLaptop {
   matchReasons: string[]
   tradeoffs: string[]
   retailers: RetailerPrice[]
+  // ── v2 authoritative-engine fields (additive; absent on pre-v2 payloads) ──
+  priceMissing?: boolean
+  /** Passed through from ScorableLaptop.priceStale (Phase 3). */
+  priceStale?: boolean
+  scoringVersion?: string
+  weightsVersion?: string
+  relaxed?: boolean
+  exhausted?: boolean
+  relaxationLedger?: Array<{ requirement: string; from: string; to: string; reason: string }>
+  adjustedView?: boolean
+  scoringMeta?: {
+    caps: Record<string, number | null>
+    weights: Record<string, number>
+    penalties: number
+    bonuses: number
+  }
+  explanation?: {
+    why: string[]
+    strengths: Array<{ dim: string; evidence: string }>
+    compromises: string[]
+    satisfied: string[]
+    missed: Array<{ id: string; required: string; actual: string; relaxed: boolean }>
+    structuralNotes: string[]
+    whyAbove: {
+      vsId: string | null
+      won: Array<{ dim: string; delta: number }>
+      lost: Array<{ dim: string; delta: number }>
+    } | null
+  }
 }
 
 export interface ScorableLaptop {
@@ -245,6 +280,11 @@ export interface ScorableLaptop {
   // Derived in toScorable() from status === "active" — kept for scoring.ts,
   // which filters on this field and is out of scope for phase 2.
   isActive: boolean
+  /** True when the region has no price row (Phase 2G quarantine). Set by toScorable(). */
+  priceMissing?: boolean
+  /** True when the picked offer is out-of-stock or past validUntil (Phase 3:
+  representable and explicit, never silently missing). Set by toScorable(). */
+  priceStale?: boolean
   isPopular: boolean
   imageUrl: string | null
   reviewScore: number | null

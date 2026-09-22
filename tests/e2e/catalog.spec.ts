@@ -31,7 +31,7 @@ test.describe("catalog page", () => {
     const errors = collectConsoleErrors(page)
 
     await page.goto("/laptops")
-    const input = page.getByPlaceholder("Search by brand or model…")
+    const input = page.getByPlaceholder("Search by brand or model...")
     await expect(input).toBeVisible()
 
     await input.fill("MacBook")
@@ -51,7 +51,7 @@ test.describe("catalog page", () => {
     const errors = collectConsoleErrors(page)
 
     await page.goto("/laptops")
-    await page.getByPlaceholder("Search by brand or model…").fill("zzz-no-such-laptop")
+    await page.getByPlaceholder("Search by brand or model...").fill("zzz-no-such-laptop")
     await page.waitForTimeout(700)
 
     await expect(page.getByRole("heading", { level: 3, name: "No laptops found" })).toBeVisible()

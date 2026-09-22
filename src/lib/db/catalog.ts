@@ -161,6 +161,10 @@ function mapWriteError(err: unknown): { error: string; code: WriteErrorCode } {
  * these calls never throw in practice.
  */
 function invalidateAfterWrite() {
+  // Outside the Next.js runtime (tsx scripts, test processes) there is no
+  // static-generation store — revalidate* would throw and the write is already
+  // committed. Callers opt out explicitly via env (tests, scripts).
+  if (process.env.SKIP_CACHE_REVALIDATE === "1") return
   try {
     invalidateCatalogCache()
     revalidatePath("/")
@@ -196,6 +200,29 @@ async function resolveUniqueSlug(base: string, excludeId?: string): Promise<stri
     if (row.slug && row.id !== excludeId) taken.add(row.slug)
   }
   return uniqueSlug(base, taken)
+}
+
+/** Minimal writer surface for slug-redirect recording (prisma or a $transaction client). */
+type RedirectWriter = Pick<typeof prisma, "slugRedirect">
+
+/**
+ * Records oldSlug -> laptopId (Phase 3). Deterministic + idempotent: no-ops on
+ * missing/identical slugs; latest owner wins via upsert on `from`. Read paths
+ * resolve `from` straight to the laptop's CURRENT slug (single hop), so stale
+ * chains and swaps can never cycle.
+ */
+export async function recordSlugRedirect(
+  db: RedirectWriter,
+  laptopId: string,
+  oldSlug: string | null,
+  newSlug: string | null
+): Promise<void> {
+  if (!oldSlug || !newSlug || oldSlug === newSlug) return
+  await db.slugRedirect.upsert({
+    where: { from: oldSlug },
+    update: { laptopId },
+    create: { from: oldSlug, laptopId },
+  })
 }
 
 /** Links Laptop.brandId to the Brand master row by display name (null if unknown). */
@@ -314,7 +341,7 @@ export async function updateLaptop(id: string, data: LaptopPatchData): Promise<C
   try {
     const current = await prisma.laptop.findUnique({
       where: { id },
-      select: { brand: true, model: true, variant: true },
+      select: { brand: true, model: true, variant: true, slug: true },
     })
     if (!current) return { ok: false, error: "Laptop not found", code: "not_found" }
 
@@ -332,6 +359,15 @@ export async function updateLaptop(id: string, data: LaptopPatchData): Promise<C
       // values match LaptopUpdateInput (string/number/boolean/string[]/null).
       data: { ...data, ...(slug ? { slug } : {}) } as Prisma.LaptopUpdateInput,
     })
+
+    // Phase 3: preserve the old URL identity (best-effort; never fails the edit).
+    if (slug) {
+      try {
+        await recordSlugRedirect(prisma, id, current.slug, slug)
+      } catch (err) {
+        console.error("Slug redirect record error (non-fatal):", err)
+      }
+    }
 
     invalidateAfterWrite()
     return { ok: true, laptop }
@@ -461,6 +497,11 @@ export async function importLaptops(
     )
 
     await prisma.$transaction(async tx => {
+      const existing = await tx.laptop.findMany({
+        where: { id: { in: prepared.map(p => p.id) } },
+        select: { id: true, slug: true },
+      })
+      const oldById = new Map(existing.map(e => [e.id, e.slug] as const))
       for (const { item, id, slug, brandId } of prepared) {
         await tx.laptop.upsert({
           where: { id },
@@ -478,6 +519,8 @@ export async function importLaptops(
             ...toLaptopData(item.data),
           },
         })
+        // Phase 3: renamed slugs keep a 308 trail (transactional with the write).
+        await recordSlugRedirect(tx, id, oldById.get(id) ?? null, slug)
         for (const p of item.prices ?? []) {
           await tx.laptopPrice.upsert({
             where: { laptopId_region_retailer: { laptopId: id, region: p.region, retailer: p.retailer } },

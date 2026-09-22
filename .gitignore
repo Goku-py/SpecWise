@@ -45,6 +45,15 @@ dev.log
 
 # local agent/QA tool output
 .playwright-mcp/
+.headroom/
+
+# throwaway local scripts (scratch/debug helpers, never app code)
+scripts/tmp-*.ts
+
+# local verification artifacts (dev-verify.log, prod-verify.log, *.quiz-verify.png)
+*verify*.log
+*verify*.png
+.next-dev.log
 
 # superseded design-lane output (redesign direction lives in docs/PRODUCTION-AUDIT.md)
 docs/audit-shots/
@@ -52,6 +61,8 @@ docs/design-system/
 
 # env files (can opt-in for committing if needed)
 .env
+.env.local
+.env*.local
 
 # vercel
 .vercel

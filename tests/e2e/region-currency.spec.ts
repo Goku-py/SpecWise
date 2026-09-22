@@ -114,11 +114,11 @@ test.describe("mobile menu", () => {
     // Menu content
     const menuNav = page.getByRole("navigation", { name: "Mobile navigation" })
     await expect(menuNav).toBeVisible()
-    await expect(menuNav.getByRole("link", { name: "Find a Laptop" })).toBeVisible()
-    await expect(menuNav.getByRole("link", { name: "Catalog" })).toBeVisible()
+    await expect(menuNav.getByRole("link", { name: "Database" })).toBeVisible()
     await expect(menuNav.getByRole("link", { name: "Compare" })).toBeVisible()
-    await expect(page.locator("#mobile-menu").getByRole("link", { name: "Get Started" })).toBeVisible()
-    await expect(page.getByText("Theme", { exact: true })).toBeVisible()
+    await expect(menuNav.getByRole("link", { name: "Methodology" })).toBeVisible()
+    await expect(menuNav.getByRole("link", { name: "API" })).toBeVisible()
+    await expect(page.locator("#mobile-menu").getByRole("link", { name: "OPEN DATABASE →" })).toBeVisible()
     await expect(page.getByText("Region", { exact: true })).toBeVisible()
 
     // Escape closes and focus returns to the toggle
@@ -131,7 +131,7 @@ test.describe("mobile menu", () => {
 
     // Reopen and navigate
     await toggle.click()
-    await menuNav.getByRole("link", { name: "Catalog" }).click()
+    await menuNav.getByRole("link", { name: "Database" }).click()
     await page.waitForURL("**/laptops")
     await expect(menuNav).toBeHidden()
 
