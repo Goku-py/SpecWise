@@ -24,6 +24,18 @@
   --secondary: #1A1D28;
   --secondary-soft: #252938;
   --ring: #FF5500;
+  /* P0 landing accents (additive — existing tokens untouched) */
+  --electric: #38E1FF;
+  --violet: #7C6CFF;
+  /* Radius scale */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  /* Elevation */
+  --shadow-elev-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+  --shadow-elev-2: 0 2px 4px rgb(0 0 0 / 0.5), 0 12px 40px rgb(0 0 0 / 0.4);
+  --glow-electric: 0 0 0 1px rgb(56 225 255 / 0.25), 0 8px 32px rgb(56 225 255 / 0.12);
 }
 
 @theme inline {
@@ -44,6 +56,8 @@
   --color-secondary: var(--secondary);
   --color-secondary-soft: var(--secondary-soft);
   --color-ring: var(--ring);
+  --color-electric: var(--electric);
+  --color-violet: var(--violet);
 
   /* New explicit names — the rest of the build should prefer these.
      NOTE: `text-secondary` resolves to the legacy --color-secondary
@@ -56,7 +70,7 @@
   --color-subtle: var(--border); /* required so the `border-subtle` class resolves */
   --color-text-secondary: var(--muted);
 
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-jetbrains-mono);
 }
 
@@ -157,6 +171,64 @@ body {
 /* Mono font utilities */
 .font-mono {
   font-family: var(--font-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Number inputs: hide browser-native spinners for a clean system look.
+   type="number" semantics are fully preserved — keyboard entry, ArrowUp /
+   ArrowDown stepping, min/max validation, and mobile numeric keyboards
+   keep working; only the outdated spinner chrome is removed. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ── P0 landing typography ─────────────────────────────────────────── */
+/* Eyebrow: mono 12px uppercase kickers above section titles. */
+.eyebrow {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* Hero H1: Geist 800, fluid 2.5rem → 4.25rem, tight tracking. */
+.hero-h1 {
+  font-weight: 800;
+  font-size: clamp(2.5rem, 5vw + 1rem, 4.25rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--foreground);
+}
+
+/* Lede: 16–18px muted intro paragraph. */
+.lede {
+  font-size: clamp(1rem, 0.5vw + 0.875rem, 1.125rem);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Skip link: visually hidden until keyboard focus. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  border-radius: 0 0 var(--radius-md) 0;
+}
+.skip-link:focus-visible {
+  left: 0;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* Respect users who prefer reduced motion: collapse animations/transitions

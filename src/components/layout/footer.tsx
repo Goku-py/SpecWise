@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Monitor } from "lucide-react"
+import { SCORING_VERSION_V3 } from "@/lib/recommend/v3/types"
 
 export function Footer() {
   return (
@@ -17,7 +18,7 @@ export function Footer() {
               <div>BUILD: 2026.8.2</div>
               <div>CONTRIBUTORS: 4</div>
               <div className="pt-2 border-t border-border">
-                <span className="text-text-tertiary">Engine: SpecWise v2.1.0</span>
+                <span className="text-muted">Engine: SpecWise {SCORING_VERSION_V3}</span>
               </div>
             </div>
           </div>
@@ -46,18 +47,28 @@ export function Footer() {
                   Quiz
                 </Link>
               </li>
+              <li>
+                <Link href="/#methodology" className="hover:text-foreground transition-colors">
+                  Methodology
+                </Link>
+              </li>
+              <li>
+                <Link href="/#methodology" className="hover:text-foreground transition-colors">
+                  How matching works
+                </Link>
+              </li>
               <li className="pt-2 border-t border-border">
-                <Link href="/about" className="text-text-tertiary hover:text-foreground transition-colors">
+                <Link href="/about" className="text-muted hover:text-foreground transition-colors">
                   About &rarr;
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-text-tertiary hover:text-foreground transition-colors">
+                <Link href="/privacy" className="text-muted hover:text-foreground transition-colors">
                   Privacy &rarr;
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-text-tertiary hover:text-foreground transition-colors">
+                <Link href="/terms" className="text-muted hover:text-foreground transition-colors">
                   Terms &rarr;
                 </Link>
               </li>
@@ -79,7 +90,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <span className="text-text-tertiary">Submit spec corrections via GitHub PR</span>
+                <span className="text-muted">Submit spec corrections via GitHub PR</span>
               </li>
               <li className="pt-2 border-t border-border">
                 <div className="flex gap-3">
@@ -102,6 +113,10 @@ export function Footer() {
         <div className="mt-10 border-t border-border pt-6">
           <p className="text-center text-xs text-muted sm:text-left">
             We may earn a commission from purchases made through links on this site.
+            Rankings are never sold.{" "}
+            <Link href="/#methodology" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              See Methodology.
+            </Link>
           </p>
           <p className="mt-2 text-center text-xs text-muted sm:text-left">
             &copy; {new Date().getFullYear()} SpecWise Research

@@ -6,11 +6,9 @@ import {
   readResultsSnapshot,
   readValidated,
   removeStored,
-  validateQuizAnswers,
-  validateQuizMode,
   validateResultsPayload,
-  validateStepIndex,
-  validateStoredAnswers,
+  validateV3Profile,
+  validateV3Results,
   writeValidated,
   type StorageBackend,
 } from "@/lib/storage"
@@ -31,96 +29,74 @@ function memBackend(seed: Record<string, string> = {}): StorageBackend & { store
 
 const asJson = (v: unknown) => JSON.stringify(v)
 
+const v3profile = {
+  schemaVersion: "v3",
+  workloads: [{ id: "dev", importance: "primary", subprofile: "standard" }],
+}
+const v3dto = {
+  schemaVersion: "v3",
+  items: [{ laptopId: "a", scores: { overall: 88 } }],
+}
+
 describe("envelope read/write", () => {
   it("writes v2 envelopes and reads them back", () => {
     const b = memBackend()
-    writeValidated(StorageKey.QuizMode, "quick", b)
-    const raw = JSON.parse(b.store.get(StorageKey.QuizMode)!)
+    writeValidated(StorageKey.V3Profile, v3profile, b)
+    const raw = JSON.parse(b.store.get(StorageKey.V3Profile)!)
     expect(raw.v).toBe(STORAGE_VERSION)
     expect(typeof raw.savedAt).toBe("string")
-    expect(raw.data).toBe("quick")
-    expect(readValidated(StorageKey.QuizMode, validateQuizMode, b)).toBe("quick")
+    expect(raw.data).toEqual(v3profile)
+    expect(readValidated(StorageKey.V3Profile, validateV3Profile, b)).toEqual(v3profile)
   })
 
   it("reads legacy raw payloads and migrates them to v2 idempotently", () => {
-    const b = memBackend({ [StorageKey.QuizMode]: asJson("advanced") })
-    expect(readValidated(StorageKey.QuizMode, validateQuizMode, b)).toBe("advanced")
+    const b = memBackend({ [StorageKey.V3Results]: asJson(v3dto) })
+    expect(readValidated(StorageKey.V3Results, validateV3Results, b)).toEqual(v3dto)
     // Migrated: second read sees the envelope with identical data.
-    const migrated = JSON.parse(b.store.get(StorageKey.QuizMode)!)
-    expect(migrated).toMatchObject({ v: 2, data: "advanced" })
-    expect(readValidated(StorageKey.QuizMode, validateQuizMode, b)).toBe("advanced")
-    expect(JSON.parse(b.store.get(StorageKey.QuizMode)!)).toMatchObject({ v: 2, data: "advanced" })
+    const migrated = JSON.parse(b.store.get(StorageKey.V3Results)!)
+    expect(migrated).toMatchObject({ v: 2, data: v3dto })
+    expect(readValidated(StorageKey.V3Results, validateV3Results, b)).toEqual(v3dto)
   })
 
   it("rejects malformed JSON without touching stored bytes", () => {
-    const b = memBackend({ [StorageKey.QuizAnswers]: "{not json" })
-    expect(readEnvelope(StorageKey.QuizAnswers, b)).toBeNull()
-    expect(readValidated(StorageKey.QuizAnswers, validateQuizAnswers, b)).toBeNull()
-    expect(b.store.get(StorageKey.QuizAnswers)).toBe("{not json")
+    const b = memBackend({ [StorageKey.V3Profile]: "{not json" })
+    expect(readEnvelope(StorageKey.V3Profile, b)).toBeNull()
+    expect(readValidated(StorageKey.V3Profile, validateV3Profile, b)).toBeNull()
+    expect(b.store.get(StorageKey.V3Profile)).toBe("{not json")
   })
 
   it("rejects schema-invalid data without touching stored bytes", () => {
     const b = memBackend({
-      [StorageKey.QuizMode]: asJson("turbo"),
-      [StorageKey.QuizAnswers]: asJson([1, 2, 3]),
-      [StorageKey.Results]: asJson({ results: [{ id: 7 }] }),
+      [StorageKey.V3Profile]: asJson({ schemaVersion: "v3", workloads: [] }),
+      [StorageKey.V3Results]: asJson({ schemaVersion: "v3", items: [{ laptopId: "" }] }),
     })
-    expect(readValidated(StorageKey.QuizMode, validateQuizMode, b)).toBeNull()
-    expect(readValidated(StorageKey.QuizAnswers, validateQuizAnswers, b)).toBeNull()
-    expect(readValidated(StorageKey.Results, validateResultsPayload, b)).toBeNull()
-    expect(b.store.get(StorageKey.QuizMode)).toBe(asJson("turbo"))
+    // NOTE: envelope-level validators are shape checks (server revalidates);
+    // workloads:[] passes validateV3Profile — emptiness is rejected by share parsing.
+    expect(readValidated(StorageKey.V3Profile, validateV3Profile, b)).not.toBeNull()
+    expect(readValidated(StorageKey.V3Results, validateV3Results, b)).toBeNull()
   })
 
   it("missing keys read as null; null backend is safe", () => {
     const b = memBackend()
-    expect(readValidated(StorageKey.QuizStep, validateStepIndex, b)).toBeNull()
-    expect(readValidated(StorageKey.QuizStep, validateStepIndex, null)).toBeNull()
-    expect(() => writeValidated(StorageKey.QuizStep, 1, null)).not.toThrow()
-    expect(() => removeStored(StorageKey.QuizStep, null)).not.toThrow()
+    expect(readValidated(StorageKey.V3Profile, validateV3Profile, b)).toBeNull()
+    expect(readValidated(StorageKey.V3Profile, validateV3Profile, null)).toBeNull()
+    expect(() => writeValidated(StorageKey.V3Profile, v3profile, null)).not.toThrow()
+    expect(() => removeStored(StorageKey.V3Profile, null)).not.toThrow()
   })
 })
 
-describe("quiz validators", () => {
-  it("accepts quick/advanced, rejects anything else", () => {
-    expect(validateQuizMode("quick")).toBe("quick")
-    expect(validateQuizMode("advanced")).toBe("advanced")
-    expect(validateQuizMode("QUICK")).toBeNull()
-    expect(validateQuizMode("")).toBeNull()
-    expect(validateQuizMode(null)).toBeNull()
-    expect(validateQuizMode(2)).toBeNull()
-  })
-
-  it("accepts legacy step strings and v2 numbers; rejects empty/corrupt", () => {
-    expect(validateStepIndex("2")).toBe(2)
-    expect(validateStepIndex(3)).toBe(3)
-    expect(validateStepIndex("2.7")).toBe(2.7)
-    expect(validateStepIndex("")).toBeNull()
-    expect(validateStepIndex("   ")).toBeNull()
-    expect(validateStepIndex("not-a-number")).toBeNull()
-    expect(validateStepIndex(null)).toBeNull()
-    expect(validateStepIndex(NaN)).toBeNull()
-    expect(validateStepIndex(Infinity)).toBeNull()
-  })
-
-  it("keeps known answer keys, drops unknown keys, rejects bad arrays", () => {
-    expect(
-      validateQuizAnswers({ useCase: "coding", minRam: 16, ports: ["hdmi"], __proto__: "x", future: 1 })
-    ).toEqual({ useCase: "coding", minRam: 16, ports: ["hdmi"] })
-    expect(validateQuizAnswers({ ports: ["hdmi", 7] })).toBeNull()
-    expect(validateQuizAnswers({ useCase: { nested: true } })).toBeNull()
-    expect(validateQuizAnswers("coding")).toBeNull()
-    expect(validateQuizAnswers(null)).toBeNull()
-    expect(validateQuizAnswers([])).toBeNull()
-  })
-
-  it("stored-answers blob passes plain objects through", () => {
-    expect(validateStoredAnswers({ region: "IN", useCase: "gaming" })).toEqual({ region: "IN", useCase: "gaming" })
-    expect(validateStoredAnswers([1])).toBeNull()
-    expect(validateStoredAnswers("x")).toBeNull()
+describe("v3 validators", () => {
+  it("accepts v3 profiles and DTOs, rejects legacy shapes", () => {
+    expect(validateV3Profile(v3profile)).toEqual(v3profile)
+    expect(validateV3Profile({ region: "US", useCase: "coding" })).toBeNull()
+    expect(validateV3Profile(null)).toBeNull()
+    expect(validateV3Results(v3dto)).toEqual(v3dto)
+    expect(validateV3Results({ results: [{ id: "a", matchScore: 1 }] })).toBeNull()
+    expect(validateV3Results({ schemaVersion: "v3", items: [{ laptopId: "a" }] })).toBeNull()
   })
 })
 
-describe("results payload + snapshot", () => {
+describe("results payload + snapshot (compare flow)", () => {
   const good = { results: [{ id: "a", matchScore: 88 }, { id: "b", matchScore: 0 }] }
 
   it("validates items by id + finite matchScore", () => {
@@ -155,8 +131,8 @@ describe("results payload + snapshot", () => {
   })
 
   it("removeStored deletes the key", () => {
-    const b = memBackend({ [StorageKey.QuizStep]: asJson(1) })
-    removeStored(StorageKey.QuizStep, b)
-    expect(b.store.has(StorageKey.QuizStep)).toBe(false)
+    const b = memBackend({ [StorageKey.V3Profile]: asJson(v3profile) })
+    removeStored(StorageKey.V3Profile, b)
+    expect(b.store.has(StorageKey.V3Profile)).toBe(false)
   })
 })

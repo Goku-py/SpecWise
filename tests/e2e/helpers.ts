@@ -102,6 +102,53 @@ export function seedResults(page: Page, options: SeedResultsOptions = {}): void 
 }
 
 /**
+ * Seed the v3 results DTO (specwise-v3-results) BEFORE the page script runs.
+ * Minimal items satisfy validateV3Results; specs feed the rendered cards.
+ */
+export function seedV3Results(page: Page, count = 3): void {
+  const items = Array.from({ length: count }, (_, i) => ({
+    laptopId: `v3-seed-${i}`,
+    brand: "SeedBrand",
+    model: `SeedModel ${i}`,
+    variant: null,
+    price: 1000 + i * 100,
+    currency: "USD",
+    priceStale: false,
+    priceMissing: false,
+    scores: { overall: 90 - i * 5, W: 0.9, C: 1, V: 0.5 },
+    confidence: "high",
+    confidenceFactors: [],
+    dataCompleteness: 1,
+    strengths: [{ dim: "ram", evidence: "16 GB RAM" }],
+    compromises: ["build"],
+    missedPreferred: [],
+    whyAbove: null,
+    capabilities: { ram: 0.8 },
+    specs: { ramGB: 16, storageGB: 512, os: "windows", weightKg: 1.5, refreshHz: 60 },
+  }));
+  const dto = {
+    schemaVersion: "v3",
+    scoringVersion: "v3.1",
+    weightsVersion: "v3.1",
+    region: "US",
+    currency: "USD",
+    relaxed: false,
+    exhausted: false,
+    awaitingUser: false,
+    relaxationLedger: [],
+    items,
+    contradictions: [],
+    notes: [],
+  };
+  page.addInitScript(
+    ({ dtoJson }) => {
+      localStorage.setItem("specwise-v3-results", dtoJson);
+    },
+    { dtoJson: JSON.stringify(dto) }
+  );
+}
+
+/**
  * Clear every SpecWise localStorage key (used where a test must start from a
  * pristine state on top of a page that already loaded).
  */
@@ -110,8 +157,7 @@ export function clearSpecwiseStorage(page: Page): void {
     localStorage.removeItem("specwise-results")
     localStorage.removeItem("specwise-answers")
     localStorage.removeItem("specwise-region")
-    localStorage.removeItem("specwise-quiz-answers")
-    localStorage.removeItem("specwise-quiz-step")
-    localStorage.removeItem("specwise-quiz-mode")
+    localStorage.removeItem("specwise-v3-results")
+    localStorage.removeItem("specwise-v3-profile")
   })
 }

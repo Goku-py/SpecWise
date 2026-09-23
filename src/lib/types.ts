@@ -291,5 +291,3 @@ export interface ScorableLaptop {
   notes: string | null
   retailers: RetailerPrice[]
 }
-
-export type QuestionMode = "simple" | "advanced"

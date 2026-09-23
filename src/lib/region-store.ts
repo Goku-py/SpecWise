@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useSyncExternalStore } from "react"
 import { getRegion, REGION_CODES, type RegionConfig } from "./regions"
 import { setRegion } from "@/app/actions"
@@ -47,13 +48,28 @@ function getSnapshot(): RegionConfig {
   return getRegion(currentCode ?? "US")
 }
 
+function notifyAll(): void {
+  for (const listener of listeners) listener()
+}
+
 /**
  * Subscribe to the live region. Renders `serverRegion` until hydration
  * completes, then follows the client store — so the first paint always
  * matches the server HTML while every subsequent region change re-renders
  * this component instantly.
+ *
+ * Mount sync: if the cookie changed without going through setClientRegion
+ * (proxy geo-set on an earlier response, another tab), adopt it on mount so
+ * the header can never disagree with the cookie for longer than one paint.
  */
 export function useClientRegion(serverRegion: RegionConfig): RegionConfig {
+  useEffect(() => {
+    const code = readCookieCode()
+    if (code !== null && code !== currentCode) {
+      currentCode = code
+      notifyAll()
+    }
+  }, [])
   return useSyncExternalStore(subscribe, getSnapshot, () => serverRegion)
 }
 
@@ -64,6 +80,6 @@ export function useClientRegion(serverRegion: RegionConfig): RegionConfig {
  */
 export async function setClientRegion(code: string): Promise<void> {
   currentCode = code
-  for (const listener of listeners) listener()
+  notifyAll()
   await setRegion(code)
 }

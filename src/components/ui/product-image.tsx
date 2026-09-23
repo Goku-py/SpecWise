@@ -40,7 +40,7 @@ export function ProductImage({
       alt={alt}
       width={width}
       height={height}
-      className={cn("shrink-0", className)}
+      className={cn("h-auto w-auto shrink-0", className)}
       onError={() => setError(true)}
       priority={priority}
       loading={loading}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getRegionFromCookies } from "@/lib/region"
-import { ResultsView } from "./results-view"
+import { ResultsViewV3 } from "./results-view-v3"
 
 export const metadata: Metadata = {
   title: "Your Laptop Recommendations — SpecWise",
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 
 export default async function ResultsPage() {
   const region = await getRegionFromCookies()
-  return <ResultsView initialRegion={region.code} />
+  return <ResultsViewV3 initialRegion={region.code} />
 }

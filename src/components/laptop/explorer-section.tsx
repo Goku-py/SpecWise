@@ -53,6 +53,9 @@ export default function ExplorerSection({ laptop }: { laptop: LaptopDetail }) {
       </div>
 
       {/* Canvas */}
+      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+        Exploded view — click a part to inspect its real specs
+      </p>
       <ExplodedLaptop
         laptop={laptop}
         activeLayer={activeLayer}

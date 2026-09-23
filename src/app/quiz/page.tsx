@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import dynamic from "next/dynamic"
 import { getRegionFromCookies } from "@/lib/region"
-import { parseQuizShareParams, type QuizSearchParams } from "@/lib/share"
+import { parseV3ShareParams, type QuizSearchParams } from "@/lib/share"
 
 export const metadata: Metadata = {
   title: "Laptop Quiz — Find the Right Laptop | SpecWise",
@@ -9,14 +9,15 @@ export const metadata: Metadata = {
     "Answer a few quick questions about your budget, workload, and preferences to get personalized laptop recommendations.",
 }
 
-const SpecQuiz = dynamic(
-  () => import("@/components/quiz/SpecQuiz").then(m => m.SpecQuiz),
+// v3: V3Quiz (CanonicalProfile → POST /api/quiz v3 → /results).
+const V3Quiz = dynamic(
+  () => import("@/components/quiz/V3Quiz").then(m => m.V3Quiz),
   {
-    loading: QuizFlowLoading,
+    loading: QuizLoading,
   }
 )
 
-function QuizFlowLoading() {
+function QuizLoading() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
       <div className="mb-8">
@@ -46,5 +47,7 @@ export default async function QuizPage({
 }) {
   const region = await getRegionFromCookies()
   const params = await searchParams
-  return <SpecQuiz region={region} initialSelection={parseQuizShareParams(params)} />
+  // Legacy share params (?workload=…) parse as null → empty quiz (fail safe).
+  const sharedProfile = parseV3ShareParams(params)
+  return <V3Quiz region={region} sharedProfile={sharedProfile} />
 }

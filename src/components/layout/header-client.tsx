@@ -15,10 +15,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { href: "/laptops", label: "Database" },
-  { href: "/compare", label: "Compare" },
-  { href: "#methodology", label: "Methodology" },
-  { href: "#api", label: "API" },
+  { href: "/#workloads", label: "Workloads" },
+  { href: "/#methodology", label: "Method" },
+  { href: "/#machines", label: "Machines" },
+  { href: "/#trust", label: "Trust" },
 ]
 
 export function HeaderClient({ region }: { region: RegionConfig }) {
@@ -99,15 +99,15 @@ export function HeaderClient({ region }: { region: RegionConfig }) {
 
         <div className="hidden items-center gap-2 md:flex">
           <RegionPicker currentRegion={region} />
-          <Link href="/laptops" className={cn(buttonVariants({ size: "sm" }), "font-mono text-xs uppercase tracking-wider")}>
-            OPEN DATABASE &rarr;
+          <Link href="/quiz" className={cn(buttonVariants({ size: "sm" }))}>
+            Find My Laptop
           </Link>
         </div>
 
         <button
           ref={toggleRef}
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menu"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
           className="inline-flex size-10 items-center justify-center rounded text-muted transition hover:bg-card-hover hover:text-foreground md:hidden"
@@ -165,11 +165,11 @@ export function HeaderClient({ region }: { region: RegionConfig }) {
           </div>
 
           <Link
-            href="/laptops"
+            href="/quiz"
             onClick={() => setMenuOpen(false)}
-            className={cn(buttonVariants({ size: "sm", className: "mt-3 w-full" }), "font-mono text-xs uppercase tracking-wider")}
+            className={cn(buttonVariants({ size: "sm", className: "mt-3 w-full min-h-11" }))}
           >
-            OPEN DATABASE &rarr;
+            Find My Laptop
           </Link>
         </div>
       </div>

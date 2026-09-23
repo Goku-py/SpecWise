@@ -23,7 +23,7 @@ import {
 import { getActiveCatalog, getLaptopById, getLaptopBySlug } from "@/lib/catalog-cache"
 import { canonicalComparisonPath } from "@/lib/compare-pairs"
 import { normalizeRegion } from "@/lib/regions"
-import { REGION_COOKIE } from "@/middleware"
+import { REGION_COOKIE } from "@/proxy"
 import { ExplorerWrapper } from "@/components/laptop/explorer-wrapper"
 import type { LaptopDetail, PriceEntry } from "@/lib/types"
 

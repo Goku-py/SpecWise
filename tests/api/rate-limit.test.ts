@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { defaultQuizAnswers } from "@/lib/types"
-import type { QuizAnswers } from "@/lib/types"
 import { alignRateLimitWindow, apiBase, getJson, uniqueIp, xffHeader } from "./helpers"
+import type { CanonicalProfile } from "@/lib/recommend/v3/types"
 
 interface RateLimitErrorResponse {
   error: string
@@ -47,7 +46,16 @@ describe("rate limits (per-IP, 60s window)", () => {
     const ip = uniqueIp()
     await alignRateLimitWindow()
 
-    const answers: QuizAnswers = { ...defaultQuizAnswers, useCase: "general" }
+    const profile: CanonicalProfile = {
+      schemaVersion: "v3",
+      region: "US",
+      currency: "USD",
+      workloads: [{ id: "study-office", importance: "primary", subprofile: null }],
+      budget: { min: null, max: null, noMax: true, currency: "USD" },
+      priorities: [],
+      requirements: [],
+    };
+    const body = { schemaVersion: "v3", profile };
     const statuses: number[] = []
     let retryAfter: string | null = null
     let limitBody: unknown
@@ -56,7 +64,7 @@ describe("rate limits (per-IP, 60s window)", () => {
       const res = await getJson(`${apiBase}/api/quiz`, {
         method: "POST",
         headers: { "content-type": "application/json", ...xffHeader(ip) },
-        body: JSON.stringify(answers),
+        body: JSON.stringify(body),
       })
       statuses.push(res.status)
       if (res.status === 429) {

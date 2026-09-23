@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest"
-import { defaultQuizAnswers } from "@/lib/types"
 import { apiBase, bearerHeaders, getJson, uniqueIp, xffHeader } from "./helpers"
+import type { CanonicalProfile } from "@/lib/recommend/v3/types"
+
+function v3body(region: string): unknown {
+  const profile: CanonicalProfile = {
+    schemaVersion: "v3",
+    region,
+    currency: "USD",
+    workloads: [{ id: "study-office", importance: "primary", subprofile: null }],
+    budget: { min: null, max: null, noMax: true, currency: "USD" },
+    priorities: [],
+    requirements: [],
+  };
+  return { schemaVersion: "v3", profile };
+}
 
 /**
  * Phase 3 region boundary: supported regions pass, anything else is 400 —
@@ -12,7 +25,7 @@ describe("region allowlist (API boundary)", () => {
     const res = await getJson<{ error: string }>(`${apiBase}/api/quiz`, {
       method: "POST",
       headers: { "content-type": "application/json", ...xffHeader(ip) },
-      body: JSON.stringify({ ...defaultQuizAnswers, useCase: "general", region: "XX" }),
+      body: JSON.stringify(v3body("XX")),
     })
     expect(res.status).toBe(400)
     expect(res.body.error).toBe("Unsupported region")
@@ -21,10 +34,10 @@ describe("region allowlist (API boundary)", () => {
   it("quiz: supported regions accepted (incl. lowercase normalization)", async () => {
     for (const region of ["US", "IN", "us"]) {
       const ip = uniqueIp()
-      const res = await getJson<{ results: unknown[]; total: number }>(`${apiBase}/api/quiz`, {
+      const res = await getJson<{ items: unknown[]; total: number }>(`${apiBase}/api/quiz`, {
         method: "POST",
         headers: { "content-type": "application/json", ...xffHeader(ip) },
-        body: JSON.stringify({ ...defaultQuizAnswers, useCase: "general", region }),
+        body: JSON.stringify(v3body(region)),
       })
       expect(res.status, `region ${region}`).toBe(200)
       expect(res.body.total).toBeGreaterThan(0)
@@ -59,29 +72,28 @@ describe("region allowlist (API boundary)", () => {
 
 describe("region cache isolation (behavioral)", () => {
   it("same quiz body in US vs IN returns region-consistent currencies", async () => {
-    const body = { ...defaultQuizAnswers, useCase: "general" }
     const fetchFor = async (region: string) => {
-      const res = await getJson<{ results: Array<{ currency: string; price: number }> }>(
+      const res = await getJson<{ items: Array<{ currency: string; price: number | null }> }>(
         `${apiBase}/api/quiz`,
         {
           method: "POST",
           headers: { "content-type": "application/json", ...xffHeader(uniqueIp()) },
-          body: JSON.stringify({ ...body, region }),
+          body: JSON.stringify(v3body(region)),
         }
       )
       expect(res.status).toBe(200)
-      return res.body.results
+      return res.body.items
     }
     const us = await fetchFor("US")
     const inn = await fetchFor("IN")
     expect(us.length).toBeGreaterThan(0)
     expect(inn.length).toBeGreaterThan(0)
     // No cross-region collision: priced results carry their request region's
-    // currency (priceMissing rows default currency and are excluded), and at
+    // currency (priceMissing rows carry null price and are excluded), and at
     // least one price differs between regions.
-    const pricedIn = inn.filter(r => r.price > 0)
+    const pricedIn = inn.filter(r => (r.price ?? 0) > 0)
     expect(pricedIn.length).toBeGreaterThan(0)
-    expect(us.filter(r => r.price > 0).every(r => r.currency === "USD")).toBe(true)
+    expect(us.filter(r => (r.price ?? 0) > 0).every(r => r.currency === "USD")).toBe(true)
     expect(pricedIn.every(r => r.currency === "INR")).toBe(true)
     expect(us.some((r, i) => inn[i] && r.price !== inn[i].price)).toBe(true)
   })

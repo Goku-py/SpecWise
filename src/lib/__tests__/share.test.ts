@@ -1,105 +1,74 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest";
 import {
-  buildQuizSharePath,
-  buildRedditMarkdown,
-  parseQuizShareParams,
+  buildV3SharePath,
+  parseV3ShareParams,
   type QuizSearchParams,
-} from "@/lib/share"
-import { SAMPLE_SCOREABLE } from "@/lib/sample-scoreable"
+} from "@/lib/share";
+import { quickToProfile } from "@/lib/recommend/v3/quiz";
+import type { CanonicalProfile } from "@/lib/recommend/v3/types";
 
-const FILTERED = SAMPLE_SCOREABLE[1] // Lenovo Legion Slim 5, $1299
+function quickProfile(): CanonicalProfile {
+  return quickToProfile({
+    workloads: [{ id: "gaming", importance: "primary" }],
+    gamingSubtype: "aaa",
+    region: "US",
+    currency: "USD",
+    budgetMin: 500,
+    budgetMax: 2500,
+    priorities: ["speed", "screen"],
+    ramGB: 16,
+    ramMust: true,
+    storageGB: 512,
+    osPrefer: "windows",
+    gpuPrefer: true,
+  });
+}
 
-describe("buildQuizSharePath", () => {
-  it("encodes only the set answers", () => {
-    expect(buildQuizSharePath({ workload: "esports", budget: 1500 })).toBe(
-      "/quiz?workload=esports&budget=1500"
-    )
-  })
+function advancedProfile(): CanonicalProfile {
+  const base = quickProfile();
+  return {
+    ...base,
+    requirements: [
+      ...base.requirements,
+      { id: "vram", kind: "hard", importance: 2, target: 12, provenance: { source: "advanced", reason: "VRAM must have ≥12GB" }, userMust: true },
+      { id: "ports", kind: "hard", importance: 2, target: "hdmi+usb-c", provenance: { source: "advanced", reason: "Ports required" }, userMust: true },
+      { id: "brand-prefer", kind: "target", targetClass: "B", importance: 3, target: "amd", provenance: { source: "advanced", reason: "AMD preferred" }, userMust: false },
+    ],
+  };
+}
 
-  it("falls back to a bare path with no answers", () => {
-    expect(buildQuizSharePath({})).toBe("/quiz")
-    expect(buildQuizSharePath({ workload: null, budget: null })).toBe("/quiz")
-  })
+function paramsOf(path: string): QuizSearchParams {
+  return Object.fromEntries(
+    new URL(path, "http://localhost").searchParams,
+  ) as QuizSearchParams;
+}
 
-  it("percent-encodes reserved characters in enum values", () => {
-    expect(buildQuizSharePath({ refresh: "144+" })).toBe("/quiz?refresh=144%2B")
-  })
-})
+describe("v3 share round trip", () => {
+  it("Quick profile survives create/share → open/share", () => {
+    const profile = quickProfile();
+    const parsed = parseV3ShareParams(paramsOf(buildV3SharePath(profile)));
+    expect(parsed).toEqual(profile);
+  });
 
-describe("parseQuizShareParams", () => {
-  it("accepts known values and drops unknown ones", () => {
-    const parsed = parseQuizShareParams({
-      workload: "video-editing",
-      portability: "always",
-      upgrade: "must",
-      form: "13-14",
-      refresh: "240+",
-    })
-    expect(parsed).toEqual({
-      workload: "video-editing",
-      budget: null,
-      portability: "always",
-      refresh: "240+",
-      upgrade: "must",
-      form: "13-14",
-    })
-  })
+  it("Advanced profile (hards, ports, Type-B) survives round trip", () => {
+    const profile = advancedProfile();
+    const parsed = parseV3ShareParams(paramsOf(buildV3SharePath(profile)));
+    expect(parsed).toEqual(profile);
+  });
 
-  it("rejects values outside the allowlist", () => {
-    const parsed = parseQuizShareParams({ workload: "hacking", refresh: "999", form: "wide" })
-    expect(parsed.workload).toBeNull()
-    expect(parsed.refresh).toBeNull()
-    expect(parsed.form).toBeNull()
-  })
+  it("malformed payloads fail safe to null", () => {
+    expect(parseV3ShareParams({})).toBeNull();
+    expect(parseV3ShareParams({ s: "" })).toBeNull();
+    expect(parseV3ShareParams({ s: "!!!not-base64!!!" })).toBeNull();
+    expect(parseV3ShareParams({ s: Buffer.from("[]").toString("base64url") })).toBeNull();
+    expect(
+      parseV3ShareParams({ s: Buffer.from(JSON.stringify({ foo: 1 })).toString("base64url") }),
+    ).toBeNull();
+  });
 
-  it("clamps the budget to the slider range and rejects non-numeric input", () => {
-    expect(parseQuizShareParams({ budget: "1500" }).budget).toBe(1500)
-    expect(parseQuizShareParams({ budget: "999999" }).budget).toBe(3000)
-    expect(parseQuizShareParams({ budget: "100" }).budget).toBe(500)
-    expect(parseQuizShareParams({ budget: "abc" }).budget).toBeNull()
-    expect(parseQuizShareParams({}).budget).toBeNull()
-  })
-
-  it("takes the first value when a param repeats", () => {
-    expect(parseQuizShareParams({ workload: ["esports", "everyday"] }).workload).toBe("esports")
-  })
-
-  it("round-trips through buildQuizSharePath", () => {
-    const selection = {
-      workload: "ai-ml" as const,
-      budget: 2000,
-      portability: "sometimes" as const,
-      refresh: "144+" as const,
-      upgrade: "nice" as const,
-    }
-    const path = buildQuizSharePath(selection)
-    const query = Object.fromEntries(new URL(path, "http://localhost").searchParams) as QuizSearchParams
-    expect(parseQuizShareParams(query)).toEqual({ ...selection, form: null })
-  })
-})
-
-describe("buildRedditMarkdown", () => {
-  it("renders a markdown spec table with the build name and price", () => {
-    const md = buildRedditMarkdown(FILTERED, 0.923, "USD", "https://specwise.app/quiz?budget=1500")
-    expect(md).toContain("**Top pick: Lenovo Legion Slim 5** — 92% match")
-    expect(md).toContain("| Component | Spec |")
-    expect(md).toContain("| --- | --- |")
-    expect(md).toContain("| RAM | 16 GB DDR5 |")
-    expect(md).toContain("| Price | $1,299 |")
-    expect(md).toContain("Full breakdown: https://specwise.app/quiz?budget=1500")
-  })
-
-  it("escapes pipes so a spec value cannot break the table", () => {
-    const mutant = {
-      ...FILTERED,
-      laptopSpec: { ...FILTERED.laptopSpec, cpuFamily: "Ryzen|7" },
-    }
-    const md = buildRedditMarkdown(mutant, 0.5, "USD", "/quiz")
-    expect(md).toContain("Ryzen\\|7")
-    // Every table row still has exactly two unescaped cell separators inside.
-    const rows = md.split("\n").filter(l => l.startsWith("|") && !l.startsWith("| ---"))
-    for (const row of rows) {
-      expect(row.replace(/\\\|/g, "").match(/\|/g)).toHaveLength(3)
-    }
-  })
-})
+  it("legacy share payloads are NOT reinterpreted (fail safe)", () => {
+    expect(
+      parseV3ShareParams({ workload: "esports", budget: "1500", refresh: "240+", portability: "always", upgrade: "must" }),
+    ).toBeNull();
+  });
+});

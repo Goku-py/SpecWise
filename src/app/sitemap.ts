@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next"
-import { USE_CASE_LABELS } from "@/lib/questions"
+import { CATEGORY_SLUGS } from "@/lib/recommend/v3/categories"
 import { buildComparisonPairs, canonicalComparisonPath } from "@/lib/compare-pairs"
 import { prisma } from "@/lib/prisma"
 
@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
-  for (const useCase of Object.keys(USE_CASE_LABELS)) {
+  for (const useCase of CATEGORY_SLUGS) {
     entries.push({
       url: new URL(`/category/${useCase}`, BASE_URL).toString(),
       changeFrequency: "weekly",

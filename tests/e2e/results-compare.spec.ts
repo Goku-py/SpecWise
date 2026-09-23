@@ -1,32 +1,24 @@
 import { test, expect } from "@playwright/test"
-import { collectConsoleErrors, shouldHaveNoConsoleErrors, seedResults } from "./helpers"
+import { collectConsoleErrors, shouldHaveNoConsoleErrors, seedResults, seedV3Results } from "./helpers"
 import { SEEDED_RESULTS, SEEDED_COMPARE_IDS } from "./fixtures/results"
 
 /**
- * Results + compare pages. These hydrate from localStorage (previously the
- * source of the /compare hydration mismatch), so seeding BEFORE load asserts
- * both the rendered content and zero console errors (the regression guard).
+ * Results (v3 DTO) + compare pages. Results hydrates the v3 DTO from
+ * localStorage; compare hydrates its own legacy pool the same way, so seeding
+ * BEFORE load asserts both the rendered content and zero console errors.
  */
 
 test.describe("results page", () => {
-  test("renders the top match and more options from seeded localStorage", async ({ page }) => {
+  test("renders the top match and more options from seeded v3 DTO", async ({ page }) => {
     const errors = collectConsoleErrors(page)
-    seedResults(page, { laptops: SEEDED_RESULTS })
+    seedV3Results(page, 3)
 
     await page.goto("/results")
     await expect(page.getByRole("heading", { level: 1, name: "Your Matches" })).toBeVisible()
-    await expect(page.getByText("Best Match")).toBeVisible()
-    await expect(page.getByText("More Options")).toBeVisible()
-
-    // 1 "ADJUST WEIGHTS" panel heading in the aside + 1 level-3 heading per
-    // card (top match card + up to 6 "More Options" cards)
-    const main = page.locator("main")
-    await expect(main.getByRole("heading", { level: 3 })).toHaveCount(
-      2 + Math.min(6, SEEDED_RESULTS.length - 1)
-    )
-    await expect(main.getByRole("button", { name: "Compare", exact: true })).toHaveCount(
-      1 + Math.min(6, SEEDED_RESULTS.length - 1)
-    )
+    await expect(page.getByText("Best match")).toBeVisible()
+    await expect(page.getByText("More options")).toBeVisible()
+    await expect(page.getByTestId("top-specs")).toBeVisible()
+    await expect(page.getByTestId("item-specs")).toHaveCount(2)
 
     shouldHaveNoConsoleErrors(errors)
   })
@@ -35,10 +27,10 @@ test.describe("results page", () => {
     const errors = collectConsoleErrors(page)
     await page.goto("/results")
     await page.waitForURL("**/quiz")
-    // /quiz renders the 3-step SpecQuiz directly — step 1 (Workload) is shown
+    // /quiz renders the v3 Quick quiz directly — Q1 (Workload) is shown
     // immediately; there is no gate/mode picker.
     await expect(
-      page.getByRole("heading", { level: 2, name: "What will you primarily use it for?" })
+      page.getByRole("heading", { level: 2, name: "What will you mainly use this laptop for?" })
     ).toBeVisible()
     await expect(page.getByRole("navigation", { name: "Quiz progress" })).toContainText("Workload")
     shouldHaveNoConsoleErrors(errors)

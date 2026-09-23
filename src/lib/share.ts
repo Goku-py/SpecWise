@@ -1,145 +1,53 @@
 /**
- * Share / export helpers (pure, isomorphic).
+ * Share helpers (pure, isomorphic) — v3.
  *
- * Two concerns, both side-effect free so they can be unit-tested and called
- * from server or client:
- *  1. Quiz-selection <-> query-string round trip (`/quiz?workload=…&budget=…`),
- *     so a result set can be bookmarked or shared and rehydrated on load.
- *  2. Reddit-ready markdown export of the top recommended build.
+ * Share URLs carry the CanonicalProfile v3 as a single base64url JSON payload:
+ *   /quiz?s=<base64url>
+ * Old-format links (?workload=esports&budget=…) are NOT reinterpreted: they
+ * parse as null and the quiz opens empty (fail safe, never silently remapped).
  */
-import type { ScoreableProduct } from "./recommendation"
-import { formatPrice } from "./utils"
-import { BUDGET_OPEN_MAX } from "@/store/useQuizStore"
-import type {
-  FormFactor,
-  PortabilityPreference,
-  RefreshRateGoal,
-  UpgradeabilityPreference,
-  WorkloadIntent,
-} from "@/store/useQuizStore"
+import { CanonicalProfileSchema } from "./recommend/v3/validate";
+import type { CanonicalProfile } from "./recommend/v3/types";
 
-/** The subset of store answers that is worth putting in a share URL. */
-export interface QuizShareSelection {
-  workload: Exclude<WorkloadIntent, null> | null
-  budget: number | null
-  portability: PortabilityPreference
-  refresh: RefreshRateGoal
-  upgrade: UpgradeabilityPreference
-  form: FormFactor
-}
-
-/** Next.js page `searchParams` shape (values may repeat). */
-export type QuizSearchParams = Record<string, string | string[] | undefined>
-
-// Allowlists mirror the store's union types. Anything else is ignored, so a
-// hand-edited URL can never put the store into an invalid state.
-const WORKLOADS = ["esports", "aaa-gaming", "video-editing", "ai-ml", "everyday"] as const
-const PORTABILITIES = ["desk", "sometimes", "always"] as const
-const REFRESHES = ["60", "120", "144+", "240+"] as const
-const UPGRADES = ["must", "nice", "no"] as const
-const FORMS = ["13-14", "15-16", "17+"] as const
-
-export const BUDGET_SLIDER_MIN = 500
-
-function pick<T extends string>(allowed: readonly T[], value: string | undefined): T | null {
-  return value != null && (allowed as readonly string[]).includes(value) ? (value as T) : null
-}
+export type QuizSearchParams = Record<string, string | string[] | undefined>;
 
 function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value
+  return Array.isArray(value) ? value[0] : value;
 }
 
-/** Parse + validate a query object into a selection (invalid values become null). */
-export function parseQuizShareParams(params: QuizSearchParams): QuizShareSelection {
-  const rawBudget = first(params.budget)
-  const parsed = rawBudget != null ? Number(rawBudget) : NaN
-  const budget = Number.isFinite(parsed) && String(rawBudget ?? "").trim() !== ""
-    ? Math.min(BUDGET_OPEN_MAX, Math.max(BUDGET_SLIDER_MIN, Math.round(parsed)))
-    : null
-
-  return {
-    workload: pick(WORKLOADS, first(params.workload)),
-    budget,
-    portability: pick(PORTABILITIES, first(params.portability)),
-    refresh: pick(REFRESHES, first(params.refresh)),
-    upgrade: pick(UPGRADES, first(params.upgrade)),
-    form: pick(FORMS, first(params.form)),
+function decodeSharePayload(raw: string): unknown {
+  try {
+    const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const json =
+      typeof Buffer !== "undefined"
+        ? Buffer.from(b64, "base64").toString("utf-8")
+        : atob(b64);
+    return JSON.parse(json);
+  } catch {
+    return null;
   }
 }
 
-/** Build a `/quiz?…` path from the non-null selections (omits empty values). */
-export function buildQuizSharePath(selection: Partial<QuizShareSelection>): string {
-  const query = new URLSearchParams()
-  if (selection.workload) query.set("workload", selection.workload)
-  if (selection.budget != null) query.set("budget", String(selection.budget))
-  if (selection.portability) query.set("portability", selection.portability)
-  if (selection.refresh) query.set("refresh", selection.refresh)
-  if (selection.upgrade) query.set("upgrade", selection.upgrade)
-  if (selection.form) query.set("form", selection.form)
-  const qs = query.toString()
-  return qs ? `/quiz?${qs}` : "/quiz"
-}
-
-function escapeCell(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ")
-}
-
-function orDash(value: string | null | undefined): string {
-  return value && value.trim() ? value : "—"
-}
-
 /**
- * Markdown spec table for the top-ranked build, ready to paste into
- * r/buildapc or r/pcmasterrace. `shareUrl` should be absolute for the
- * attribution link to work once pasted.
+ * Parse + validate the `s` query param into a CanonicalProfile.
+ * Anything invalid (missing, bad base64, schema-invalid, legacy params) → null.
  */
-export function buildRedditMarkdown(
-  item: ScoreableProduct,
-  score: number,
-  currency: string,
-  shareUrl: string
-): string {
-  const spec = item.laptopSpec
-  const pct = Math.round(score * 100)
-  const title = `${item.product.brandLabel} ${item.product.name}`.trim()
+export function parseV3ShareParams(params: QuizSearchParams): CanonicalProfile | null {
+  const raw = first(params.s);
+  if (typeof raw !== "string" || raw.length === 0 || raw.length > 8192) return null;
+  const parsed = CanonicalProfileSchema.safeParse(decodeSharePayload(raw));
+  if (!parsed.success) return null;
+  if (parsed.data.workloads.length === 0) return null;
+  return parsed.data;
+}
 
-  const cpu = `${spec.cpuBrand} ${spec.cpuFamily}${spec.cpuCores ? ` · ${spec.cpuCores} cores` : ""}`
-  const gpu =
-    spec.gpuType === "INTEGRATED"
-      ? "Integrated"
-      : `${spec.gpuModel ?? "Dedicated GPU"}${spec.gpuVRAMGb ? ` · ${spec.gpuVRAMGb} GB VRAM` : ""}`
-  const ram = `${spec.ramAmountGb} GB${spec.ramType ? ` ${spec.ramType}` : ""}`
-  const storage = `${spec.storageAmountGb} GB ${spec.storageType}`
-  const display =
-    `${spec.displaySizeIn}" ${spec.displayPanelType ?? ""} ${spec.displayRefreshHz}Hz`.trim() +
-    (spec.displayNits ? ` · ${spec.displayNits} nits` : "")
-  const battery =
-    [spec.batteryWh ? `${spec.batteryWh} Wh` : null, spec.batteryLifeHr ? `${spec.batteryLifeHr} h` : null]
-      .filter(Boolean)
-      .join(" · ") || "—"
-  const weight = spec.weightKg != null ? `${spec.weightKg} kg` : "—"
-  const price =
-    item.price != null && Number.isFinite(item.price)
-      ? formatPrice(item.price, currency)
-      : "Price unavailable"
-
-  const rows: Array<[string, string]> = [
-    ["CPU", cpu],
-    ["GPU", gpu],
-    ["RAM", ram],
-    ["Storage", storage],
-    ["Display", display],
-    ["Battery", battery],
-    ["Weight", weight],
-    ["Price", price],
-    ["Match score", `${pct}%`],
-  ]
-
-  const table = [
-    "| Component | Spec |",
-    "| --- | --- |",
-    ...rows.map(([label, value]) => `| ${escapeCell(label)} | ${escapeCell(orDash(value))} |`),
-  ].join("\n")
-
-  return `**Top pick: ${title}** — ${pct}% match\n\n${table}\n\nFull breakdown: ${shareUrl}`
+/** Build a `/quiz?s=…` path from a profile (omits nothing — the profile is the payload). */
+export function buildV3SharePath(profile: CanonicalProfile): string {
+  const json = JSON.stringify(profile);
+  const b64 =
+    typeof Buffer !== "undefined"
+      ? Buffer.from(json, "utf-8").toString("base64")
+      : btoa(json);
+  const url = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `/quiz?s=${url}`;
 }

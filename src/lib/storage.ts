@@ -14,16 +14,14 @@
  * The module never touches `window` at import time. All access flows through
  * an injectable backend so unit tests run in Node with an in-memory Map.
  */
-import type { QuizAnswers, RecommendedLaptop } from "./types"
+import type { RecommendedLaptop } from "./types"
 
 export const STORAGE_VERSION = 2 as const
 
 export const StorageKey = {
-  QuizAnswers: "specwise-quiz-answers",
-  QuizStep: "specwise-quiz-step",
-  QuizMode: "specwise-quiz-mode",
   Results: "specwise-results",
-  StoredAnswers: "specwise-answers",
+  V3Results: "specwise-v3-results",
+  V3Profile: "specwise-v3-profile",
 } as const
 
 export type StorageKeyName = (typeof StorageKey)[keyof typeof StorageKey]
@@ -151,86 +149,26 @@ export function removeStored(
 
 // ── Validators ─────────────────────────────────────────────────────────────
 
-const QUIZ_MODES = ["quick", "advanced"] as const
-export type StoredQuizMode = (typeof QUIZ_MODES)[number]
-
-/** "quick" | "advanced", inside or outside an envelope. Anything else is absent. */
-export function validateQuizMode(u: unknown): StoredQuizMode | null {
-  return typeof u === "string" &&
-    (QUIZ_MODES as readonly string[]).includes(u)
-    ? (u as StoredQuizMode)
-    : null
-}
-
-/**
- * Step index as stored (`String(stepIndex)` legacy, number in v2).
- * Returns the finite number; callers floor + clamp exactly as before
- * (quiz-flow FIX 3). Non-finite/empty/absent reads as null.
- */
-export function validateStepIndex(u: unknown): number | null {
-  if (typeof u === "number") return Number.isFinite(u) ? u : null
-  if (typeof u === "string") {
-    if (u.trim() === "") return null
-    const n = Number(u)
-    return Number.isFinite(n) ? n : null
-  }
-  return null
-}
-
-/** Known QuizAnswers keys — unknown keys are dropped (forward compat). */
-const KNOWN_ANSWER_KEYS = new Set<string>([
-  "region",
-  "useCase",
-  "budgetMin",
-  "budgetMax",
-  "os",
-  "cpuBrand",
-  "minRam",
-  "minStorage",
-  "gpu",
-  "battery",
-  "portability",
-  "displaySize",
-  "displayQuality",
-  "gaming",
-  "upgradeability",
-  "buildQuality",
-  "ports",
-  "webcam",
-  "security",
-  "refurbished",
-])
-
-/**
- * Partial answers merged over defaults by the caller (existing quiz-flow
- * behavior). Requires a plain object; arrays are accepted only when every
- * element is a string; scalars pass through untouched (server validates).
- */
-export function validateQuizAnswers(u: unknown): Partial<QuizAnswers> | null {
+/** v3 profile blob: schemaVersion + workloads passthrough (server revalidates). */
+export function validateV3Profile(u: unknown): Record<string, unknown> | null {
   if (!isPlainObject(u)) return null
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(u)) {
-    if (!KNOWN_ANSWER_KEYS.has(k)) continue
-    if (Array.isArray(v)) {
-      if (!v.every(e => typeof e === "string")) return null
-      out[k] = [...v]
-    } else if (
-      v === null ||
-      typeof v === "string" ||
-      typeof v === "number" ||
-      typeof v === "boolean"
-    ) {
-      out[k] = v
-    } else {
-      return null
-    }
-  }
-  return out as Partial<QuizAnswers>
+  if (u.schemaVersion !== "v3" || !Array.isArray(u.workloads)) return null
+  return { ...u }
 }
 
-/** Stored answers blob for the results view (plain object, passed through). */
-export function validateStoredAnswers(u: unknown): Record<string, unknown> | null {
-  return isPlainObject(u) ? { ...u } : null
+function isValidV3Item(u: unknown): boolean {
+  if (!isPlainObject(u)) return false
+  if (typeof u.laptopId !== "string" || u.laptopId.length === 0) return false
+  if (!isPlainObject(u.scores) || typeof u.scores.overall !== "number") return false
+  return Number.isFinite(u.scores.overall)
+}
+
+/** v3 results DTO: schemaVersion + items with scores. Server is authoritative. */
+export function validateV3Results(u: unknown): Record<string, unknown> | null {
+  if (!isPlainObject(u)) return null
+  if (u.schemaVersion !== "v3" || !Array.isArray(u.items)) return null
+  if (!(u.items as unknown[]).every(isValidV3Item)) return null
+  return { ...u }
 }
 
 function isValidResultItem(u: unknown): u is RecommendedLaptop {
