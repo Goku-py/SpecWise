@@ -71,14 +71,13 @@ function StaticScoreRing({ score }: { score: number }) {
 
 /**
  * SampleProof — result-artifact composition foreshadowing the Results page.
- * Editorial split: verdict statement left, evidence artifact right.
- * No names, no prices.
+ * Statement left, artifact card right. No names, no prices.
  */
 export function SampleProof() {
   return (
-    <section aria-labelledby="proof-title" className="border-b border-border">
+    <section aria-labelledby="proof-title" className="border-b border-border bg-card/30">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-28">
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-5">
             <p className="eyebrow mb-4">Example output</p>
             <h2 id="proof-title" className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -93,31 +92,39 @@ export function SampleProof() {
             </p>
           </div>
           <div className="lg:col-span-7">
-            <div className="border-l-2 border-accent bg-card/40 pl-6 sm:pl-8">
-              <p className="mb-5 inline-block rounded border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-                {SAMPLE_PROOF_BADGE}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                <StaticScoreRing score={SAMPLE_PROOF_FIXTURE.score} />
-                <div>
-                  <p className="text-xl font-bold text-foreground">{SAMPLE_PROOF_FIXTURE.label}</p>
-                  <p className="mt-1 text-sm text-muted">The top pick for these sample answers.</p>
-                </div>
+            <div
+              className="overflow-hidden rounded-xl border border-border bg-card"
+              style={{ boxShadow: "var(--shadow-elev-1)" }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3 sm:px-6">
+                <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground">
+                  Sample result
+                </p>
+                <p className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+                  {SAMPLE_PROOF_BADGE}
+                </p>
               </div>
-              <ul className="mt-6 space-y-2">
-                {SAMPLE_PROOF_FIXTURE.strengths.map((strength) => (
-                  <li key={strength} className="flex items-start gap-2 text-sm text-foreground">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-success" aria-hidden="true" />
-                    {strength}
+              <div className="px-5 py-6 sm:px-6">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                  <StaticScoreRing score={SAMPLE_PROOF_FIXTURE.score} />
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{SAMPLE_PROOF_FIXTURE.label}</p>
+                    <p className="mt-1 text-sm text-muted">The top pick for these sample answers.</p>
+                  </div>
+                </div>
+                <ul className="mt-6 space-y-2 border-t border-border pt-5">
+                  {SAMPLE_PROOF_FIXTURE.strengths.map((strength) => (
+                    <li key={strength} className="flex items-start gap-2 text-sm text-foreground">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-success" aria-hidden="true" />
+                      {strength}
+                    </li>
+                  ))}
+                  <li className="flex items-start gap-2 text-sm text-muted">
+                    <X className="mt-0.5 h-4 w-4 shrink-0 text-accent-danger" aria-hidden="true" />
+                    {SAMPLE_PROOF_FIXTURE.tradeoff}
                   </li>
-                ))}
-                <li className="flex items-start gap-2 text-sm text-muted">
-                  <X className="mt-0.5 h-4 w-4 shrink-0 text-accent-danger" aria-hidden="true" />
-                  {SAMPLE_PROOF_FIXTURE.tradeoff}
-                </li>
-              </ul>
-              <div className="mt-6 border-t border-border pt-5" aria-hidden="true">
-                <div className="grid gap-4 sm:grid-cols-3">
+                </ul>
+                <div className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-3" aria-hidden="true">
                   {SAMPLE_PROOF_FIXTURE.bars.map((bar) => (
                     <div key={bar.label}>
                       <div className="mb-1 flex items-baseline justify-between gap-2">
@@ -133,14 +140,14 @@ export function SampleProof() {
                     </div>
                   ))}
                 </div>
+                <p className="sr-only">
+                  Demo scores: workload fit 92, requirements fit 88, value 81.
+                </p>
+                <p className="mt-5 text-xs leading-relaxed text-muted">
+                  This is the shape of a SpecWise result: score, reasons, trade-offs.
+                  Your answers produce your own ranking.
+                </p>
               </div>
-              <p className="sr-only">
-                Demo scores: workload fit 92, requirements fit 88, value 81.
-              </p>
-              <p className="mt-5 text-xs leading-relaxed text-muted">
-                This is the shape of a SpecWise result: score, reasons, trade-offs.
-                Your answers produce your own ranking.
-              </p>
             </div>
           </div>
         </div>

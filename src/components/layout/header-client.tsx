@@ -7,6 +7,7 @@ import { Monitor, Menu, X } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { RegionPicker } from "./region-picker"
+import { AppearanceSwitcher } from "@/components/theme/appearance-switcher"
 import type { RegionConfig } from "@/lib/regions"
 
 interface NavItem {
@@ -97,6 +98,7 @@ export function HeaderClient({ region }: { region: RegionConfig }) {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <AppearanceSwitcher />
           <RegionPicker currentRegion={region} />
           <Link href="/quiz" className={cn(buttonVariants({ size: "sm" }))}>
             Find My Laptop
@@ -160,6 +162,10 @@ export function HeaderClient({ region }: { region: RegionConfig }) {
             <div className="flex min-h-11 items-center justify-between gap-3 rounded border border-border px-3">
               <span className="text-sm text-muted">Region</span>
               <RegionPicker currentRegion={region} placement="top" />
+            </div>
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded border border-border px-3">
+              <span className="text-sm text-muted">Appearance</span>
+              <AppearanceSwitcher />
             </div>
           </div>
 

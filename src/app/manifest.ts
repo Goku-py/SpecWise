@@ -8,9 +8,10 @@ export default function manifest(): MetadataRoute.Manifest {
       "Find the right laptop without learning every spec. Answer a few simple questions and get personalized recommendations.",
     start_url: "/",
     display: "standalone",
-    // Light-mode tokens from src/app/globals.css :root.
+    // Manifest allows a single theme_color, so use the dark default (#090A0F);
+    // per-scheme chrome is handled by the themeColor array in layout.tsx.
     background_color: "#fafaf9",
-    theme_color: "#a16207",
+    theme_color: "#090A0F",
     // Only real icon asset on the site: the favicon served from src/app/favicon.ico.
     icons: [
       {

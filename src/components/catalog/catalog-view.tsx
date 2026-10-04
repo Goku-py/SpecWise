@@ -94,8 +94,8 @@ export function CatalogView({
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Browse Laptops</h1>
         <p className="mt-1 text-sm text-muted">
-          {initialRegion.flag} Explore laptops available in{" "}
-          <span className="font-medium text-foreground">{initialRegion.label}</span> — search by brand or model to find
+          Explore laptops available in{" "}
+          <span className="font-medium text-foreground">{initialRegion.label} ({initialRegion.code})</span> — search by brand or model to find
           detailed specs and pricing.
         </p>
       </div>

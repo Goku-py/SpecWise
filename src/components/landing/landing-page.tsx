@@ -16,7 +16,7 @@ interface LandingPageProps {
 export function LandingPage({ stats, regionCode, currency }: LandingPageProps) {
   return (
     <WorkloadProvider>
-      <Hero />
+      <Hero machineCount={stats.laptopCount} />
       <SampleProof />
       <HowItWorks />
       <WorkloadEntries region={regionCode} currency={currency} />

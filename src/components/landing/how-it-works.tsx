@@ -17,8 +17,8 @@ const STEPS = [
 ] as const
 
 /**
- * HowItWorks — sequential method composition with a connective rail,
- * not identical cards. Keeps the #methodology anchor.
+ * HowItWorks — one connected flow: a continuous rail with a node per
+ * step, not separate cards. Keeps the #methodology anchor.
  */
 export function HowItWorks() {
   return (
@@ -37,22 +37,21 @@ export function HowItWorks() {
               ~2 min · fine-tuning optional · skip anytime
             </p>
           </div>
-          <ol className="lg:col-span-8">
-            {STEPS.map((step, i) => (
-              <li
-                key={step.n}
-                className={`relative flex gap-6 py-7 ${i === 0 ? "pt-0" : ""} ${i < STEPS.length - 1 ? "border-b border-border" : "pb-0"}`}
-              >
-                <span aria-hidden="true" className="font-mono text-sm tracking-[0.08em] text-accent">
-                  {step.n}
-                </span>
-                {i < STEPS.length - 1 && (
-                  <span aria-hidden="true" className="absolute bottom-[-13px] left-[7px] font-mono text-xs text-muted">
-                    ↓
-                  </span>
-                )}
+          <ol className="relative lg:col-span-8">
+            {/* Continuous rail connecting all step nodes. */}
+            <span
+              aria-hidden="true"
+              className="absolute bottom-6 left-[5px] top-6 w-px bg-border-strong"
+            />
+            {STEPS.map((step) => (
+              <li key={step.n} className="relative flex gap-5 py-6 first:pt-0 last:pb-0 sm:gap-6">
+                <span
+                  aria-hidden="true"
+                  className="relative z-10 mt-1.5 size-[11px] shrink-0 rounded-full border-2 border-accent bg-background"
+                />
                 <div>
-                  <h3 className="text-lg font-semibold leading-snug text-foreground">{step.title}</h3>
+                  <p className="font-mono text-xs tracking-[0.08em] text-accent">{step.n}</p>
+                  <h3 className="mt-1 text-lg font-semibold leading-snug text-foreground">{step.title}</h3>
                   <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">{step.body}</p>
                 </div>
               </li>

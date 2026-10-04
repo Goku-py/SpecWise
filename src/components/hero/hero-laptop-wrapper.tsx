@@ -185,7 +185,7 @@ export function HeroLaptopWrapper() {
         className="relative aspect-[4/3] min-h-64 lg:aspect-square"
         style={{
           backgroundImage:
-            "linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px)",
+            "linear-gradient(to right, var(--hero-grid) 1px, transparent 1px), linear-gradient(to bottom, var(--hero-grid) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
         }}
         onPointerMove={(e) => {

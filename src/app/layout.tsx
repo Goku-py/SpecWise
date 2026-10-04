@@ -4,6 +4,8 @@ import "./globals.css"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { BootSequenceWrapper } from "@/components/boot/boot-sequence-wrapper"
+import { ThemeProvider } from "@/components/theme/theme-provider"
+import { NO_FLASH_SCRIPT } from "@/components/theme/theme"
 import { prisma } from "@/lib/prisma"
 
 const geistSans = Geist({
@@ -41,11 +43,15 @@ export const metadata: Metadata = {
   },
 }
 
-// Dark-only background token from src/app/globals.css.
+// Theme-aware chrome color: light paper / dark background tokens from
+// src/app/globals.css. Static viewport export — stays server-rendered.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#090A0F",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FAF7F1" },
+    { media: "(prefers-color-scheme: dark)", color: "#090A0F" },
+  ],
 }
 
 // Statically serialized site-wide structured data (Organization + WebSite).
@@ -93,10 +99,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col bg-background text-foreground selection:bg-accent selection:text-background">
+        {/* Theme pre-paint: applies stored/OS theme before first paint (no-flash). */}
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
+        <ThemeProvider>
         <BootSequenceWrapper laptopCount={laptopCount} />
         <a href="#main" className="skip-link">
           Skip to content
@@ -104,6 +113,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Header />
         <main id="main" className="flex-1">{children}</main>
         <Footer />
+        </ThemeProvider>
       </body>
     </html>
   )

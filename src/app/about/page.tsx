@@ -18,8 +18,8 @@ export default function AboutPage() {
           region in local currency.
         </p>
         <p>
-          The catalog currently contains 56 laptops across 6 regions, each with prices from
-          one or more retailers. Recommendations are produced by comparing your quiz answers
+          The catalog holds a curated set of laptops with per-region retailer pricing
+          in local currency. Recommendations are produced by comparing your quiz answers
           to each laptop&apos;s specs — the comparison logic is deterministic and runs
           server-side on every quiz submission.
         </p>

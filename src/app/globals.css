@@ -3,11 +3,11 @@
 /* ponytail: class-based dark mode for theme toggle */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Dark-only palette ──────────────────────────────────────────────
-   Lead decision: the site is dark-only. Tokens live at :root
-   permanently. The .dark class may still be applied by the theme
-   script later, but it is a no-op — nothing overrides these values. */
+/* ── Dark palette (default; also the no-JS posture) ───────────────────
+   Tokens live at :root permanently. Light overrides apply under
+   [data-theme="light"], set pre-paint by the no-flash script. */
 :root {
+  color-scheme: dark;
   --background: #090A0F;
   --foreground: #F3F4F6;
   --card: #12141C;
@@ -36,6 +36,37 @@
   --shadow-elev-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
   --shadow-elev-2: 0 2px 4px rgb(0 0 0 / 0.5), 0 12px 40px rgb(0 0 0 / 0.4);
   --glow-electric: 0 0 0 1px rgb(56 225 255 / 0.25), 0 8px 32px rgb(56 225 255 / 0.12);
+  /* Hero 3D backdrop grid line color (theme-aware; used via inline style). */
+  --hero-grid: rgb(255 255 255 / 0.045);
+}
+
+/* ── Light palette (intentional warm paper — not an inversion) ─────────
+   Warm paper background, near-white cards kept quiet with warm borders,
+   orange accent deepened for contrast on light, soft elevations. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #FAF7F1;
+  --foreground: #1B1D24;
+  --card: #FFFDF8;
+  --card-hover: #F4EEE1;
+  --border: #E5DBC6;
+  --border-strong: #C9BB9C;
+  --muted: #596071;
+  --text-tertiary: #8B91A1;
+  --accent: #D94800;
+  --accent-hover: #B93B00;
+  --accent-success: #0E9F5D;
+  --accent-warning: #96690A;
+  --accent-danger: #D92D20;
+  --secondary: #F1E9D7;
+  --secondary-soft: #E6D9BE;
+  --ring: #D94800;
+  --electric: #0E7FA8;
+  --violet: #5B4FD6;
+  --shadow-elev-1: 0 1px 2px rgb(60 45 20 / 0.07), 0 4px 16px rgb(60 45 20 / 0.06);
+  --shadow-elev-2: 0 2px 4px rgb(60 45 20 / 0.09), 0 12px 40px rgb(60 45 20 / 0.1);
+  --glow-electric: 0 0 0 1px rgb(14 127 168 / 0.22), 0 8px 32px rgb(14 127 168 / 0.1);
+  --hero-grid: rgb(27 29 36 / 0.06);
 }
 
 @theme inline {
