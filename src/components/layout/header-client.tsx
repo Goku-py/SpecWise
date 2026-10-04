@@ -15,10 +15,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { href: "/#workloads", label: "Workloads" },
-  { href: "/#methodology", label: "Method" },
-  { href: "/#machines", label: "Machines" },
-  { href: "/#trust", label: "Trust" },
+  { href: "/quiz", label: "Recommend" },
+  { href: "/laptops", label: "Browse" },
+  { href: "/about", label: "About" },
 ]
 
 export function HeaderClient({ region }: { region: RegionConfig }) {
