@@ -15,6 +15,7 @@ import type {
 } from "@/lib/recommend/v3/types";
 import type { DevSubprofile, GamingSubprofile } from "@/lib/recommend/v3/types";
 import { getRegion } from "@/lib/regions";
+import { advancedSectionsFor } from "@/lib/recommend/v3/quiz";
 
 function emptyProfile(regionCode = "US"): CanonicalProfile {
   const region = getRegion(regionCode);
@@ -39,6 +40,59 @@ function replaceReqs(
 }
 
 export const QUICK_STEPS = ["Workload", "Budget", "Priorities", "Must-haves"] as const;
+
+/** Pure helper: budget range error message, or null when the range is valid. */
+export function budgetRangeError(
+  min: number | null,
+  max: number | null,
+  noMax: boolean,
+): string | null {
+  if (noMax) return null;
+  if (min != null && max != null && min > max)
+    return `Minimum (${min}) is above maximum (${max}) — swap them or clear one.`;
+  return null;
+}
+
+const GPU_WORKLOADS: WorkloadId[] = ["gaming", "ai-ml", "cad-3d", "video-photo"];
+
+/**
+ * Drop requirements whose UI gate closed after a deselect. UI-state only —
+ * the engine never sees a difference beyond the removed gate. Never drops
+ * ram/storage/os/os-prefer/budget/refurb.
+ */
+function pruneAfterDeselect(
+  requirements: Requirement[],
+  workloadIds: WorkloadId[],
+  priorities: Q3Pick[],
+): Requirement[] {
+  const sections = new Set(advancedSectionsFor(workloadIds));
+  const gpuOn = workloadIds.some((w) => GPU_WORKLOADS.includes(w));
+  const weightOn = priorities.includes("carry") || workloadIds.includes("study-office");
+  return requirements.filter((r) => {
+    switch (r.id) {
+      case "gpu":
+        return gpuOn;
+      case "cpu-cores":
+        return sections.has("cpu");
+      case "vram":
+        return sections.has("gpu") || sections.has("vram");
+      case "displaySize":
+        return sections.has("display") || sections.has("display-size");
+      case "refresh":
+        return sections.has("refresh") || sections.has("display");
+      case "battery":
+        return sections.has("battery") || sections.has("weight");
+      case "ports":
+        return sections.has("ports");
+      case "upgrade":
+        return sections.has("upgrade");
+      case "weight":
+        return weightOn;
+      default:
+        return true;
+    }
+  });
+}
 
 interface V3QuizState {
   profile: CanonicalProfile;
@@ -98,7 +152,15 @@ export const useV3QuizStore = create<V3QuizState>()((set) => ({
         ...w,
         importance: i === 0 ? "primary" : w.importance === "primary" ? "secondary" : w.importance,
       }));
-      return { profile: { ...s.profile, workloads } };
+      let requirements = s.profile.requirements;
+      if (exists) {
+        requirements = pruneAfterDeselect(
+          requirements,
+          workloads.map((w) => w.id),
+          s.profile.priorities,
+        );
+      }
+      return { profile: { ...s.profile, workloads, requirements } };
     }),
 
   setImportance: (id, importance) =>
@@ -172,7 +234,15 @@ export const useV3QuizStore = create<V3QuizState>()((set) => ({
       const priorities = has
         ? s.profile.priorities.filter((p) => p !== pick)
         : [...s.profile.priorities, pick].slice(0, 2);
-      return { profile: { ...s.profile, priorities } };
+      let requirements = s.profile.requirements;
+      if (has && pick === "carry") {
+        requirements = pruneAfterDeselect(
+          requirements,
+          s.profile.workloads.map((w) => w.id),
+          priorities,
+        );
+      }
+      return { profile: { ...s.profile, priorities, requirements } };
     }),
 
   setRam: (gb, must) =>
@@ -303,5 +373,11 @@ export const useV3QuizStore = create<V3QuizState>()((set) => ({
   setAdvancedOpen: (open) => set({ advancedOpen: open }),
   setSubmitted: (v) => set({ submitted: v }),
   loadProfile: (profile) => set({ profile, step: 0, advancedOpen: false, submitted: false }),
-  reset: () => set({ profile: emptyProfile(), step: 0, advancedOpen: false, submitted: false }),
+  reset: () =>
+    set((s) => ({
+      profile: emptyProfile(s.profile.region),
+      step: 0,
+      advancedOpen: false,
+      submitted: false,
+    })),
 }));
