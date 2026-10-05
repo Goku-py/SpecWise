@@ -367,7 +367,7 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                 </fieldset>
                 <fieldset>
                   <legend className="font-mono text-xs uppercase tracking-wider text-muted">Budget ({profile.currency})</legend>
-                  <div className="mt-4 grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-[9rem_9rem_auto] sm:items-end">
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="flex flex-col gap-1.5">
                       <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Min</span>
                       <input
@@ -386,15 +386,15 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                         className="h-10 w-full rounded border border-border bg-card px-3 text-sm tabular-nums text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-40"
                       />
                     </label>
-                    <label className="flex h-10 items-center gap-2 text-xs text-muted">
-                      <input
-                        type="checkbox" checked={profile.budget.noMax}
-                        onChange={(e) => store.setBudget(profile.budget.min, profile.budget.max, e.target.checked)}
-                        className="size-4 accent-accent"
-                      />
-                      No maximum
-                    </label>
                   </div>
+                  <label className="mt-3 flex items-center gap-2 text-xs text-muted">
+                    <input
+                      type="checkbox" checked={profile.budget.noMax}
+                      onChange={(e) => store.setBudget(profile.budget.min, profile.budget.max, e.target.checked)}
+                      className="size-4 accent-accent"
+                    />
+                    No maximum
+                  </label>
                   {budgetErr && (
                     <p role="alert" aria-live="assertive" className="mt-3 text-sm text-red-400">{budgetErr}</p>
                   )}

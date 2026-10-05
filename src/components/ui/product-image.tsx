@@ -8,10 +8,12 @@ import { productImageAlt, resolveProductImage } from "@/lib/product-image"
 
 /**
  * Deliberate SpecWise "Image unavailable" frame (Phase 8): neutral Monitor
- * idiom + short label, same aspect box as the real image (no collapse, no
- * CLS), readable in Light/Dark/System via theme tokens. The icon is
- * decorative (aria-hidden); the frame itself carries role="img" + label so
- * assistive tech hears "unavailable" instead of silence.
+ * idiom + product name + short honest caption, same aspect box as the real
+ * image (no collapse, no CLS), readable in Light/Dark/System via theme
+ * tokens. Dashed border marks it as a placeholder slot, not a broken image.
+ * The icon + visible text are decorative/duplicative (aria-hidden); the frame
+ * itself carries role="img" + label so assistive tech hears "unavailable"
+ * once instead of silence or double announcement.
  */
 export function ProductImageFallback({
   alt,
@@ -33,14 +35,17 @@ export function ProductImageFallback({
       aria-label={`Image unavailable for ${alt}`}
       style={{ aspectRatio: `${width} / ${height}`, width: `min(100%, ${width}px)` }}
       className={cn(
-        "flex shrink-0 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-border bg-card text-center text-muted",
+        "flex shrink-0 flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-border bg-card text-center text-muted",
         compact ? "p-1" : "p-2",
         className
       )}
     >
       <Monitor aria-hidden className={compact ? "h-5 w-5 shrink-0" : "h-6 w-6 shrink-0"} />
       {!compact && (
-        <span className="line-clamp-2 font-mono text-[10px] leading-tight">Image unavailable</span>
+        <span aria-hidden="true" className="flex max-w-full flex-col items-center gap-0.5 px-2">
+          <span className="line-clamp-1 max-w-full text-[11px] font-semibold text-foreground">{alt}</span>
+          <span className="line-clamp-2 font-mono text-[10px] leading-tight">Image unavailable</span>
+        </span>
       )}
     </div>
   )
