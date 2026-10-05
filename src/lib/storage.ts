@@ -22,6 +22,7 @@ export const StorageKey = {
   Results: "specwise-results",
   V3Results: "specwise-v3-results",
   V3Profile: "specwise-v3-profile",
+  Binding: "specwise-v3-binding",
 } as const
 
 export type StorageKeyName = (typeof StorageKey)[keyof typeof StorageKey]
