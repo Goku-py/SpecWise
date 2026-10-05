@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { REGION_CODES } from "./regions"
+import { isAllowedProductImageUrl } from "./product-image"
 
 /**
  * Single source of truth for the Laptop edit surface (phase 2b).
@@ -62,7 +63,7 @@ export const LAPTOP_FIELDS: readonly LaptopFieldDef[] = [
   { name: "isPopular", label: "Is Popular", type: "boolean" },
   { name: "reviewScore", label: "Review Score", type: "number", help: "0–10 scale" },
   { name: "notes", label: "Notes", type: "string", help: "Free-form notes shown on the detail page" },
-  { name: "imageUrl", label: "Image URL", type: "string", help: "https://images.unsplash.com/…" },
+  { name: "imageUrl", label: "Image URL", type: "string", help: "Unsplash only: https://images.unsplash.com/… (other hosts are rejected)" },
 ]
 
 // ── Zod schema derived from the field list ─────────────────────────────────
@@ -99,6 +100,19 @@ const coerceStringArray = (v: unknown): unknown => {
 }
 
 const optionalString = z.preprocess(emptyToNull, z.string().trim().max(1000).nullable().default(null))
+
+/**
+ * Write-time image gate (Phase 8): empty means "no image" (null); any
+ * non-empty value must be an https URL on exactly the hosts in
+ * `next.config.ts` remotePatterns (see PRODUCT_IMAGE_HOSTS). Rejects the
+ * render-time allowlist crash vector: non-Unsplash/malformed URLs can never
+ * be stored via the admin form or bulk import (which shares this schema).
+ */
+const optionalImageUrl = z.preprocess(emptyToNull, z.string().trim().max(1000).nullable().default(null)).refine(
+  v => v == null || isAllowedProductImageUrl(v),
+  "Must be an https://images.unsplash.com/… URL (other hosts are not served)",
+)
+
 const requiredString = z.preprocess((v: unknown) => (typeof v === "string" ? v.trim() : v), z.string().min(1, "Required").max(1000))
 const optionalNumber = z.preprocess(coerceOptionalNumber, z.number("Must be a number").nullable().default(null))
 const requiredNumber = z.preprocess(coerceRequiredNumber, z.number("Must be a number").min(0))
@@ -143,7 +157,7 @@ export const LaptopFormSchema = z.object({
   isPopular: optionalBoolean,
   reviewScore: z.preprocess(coerceOptionalNumber, z.number("Must be a number").min(0).max(10).nullable().default(null)),
   notes: optionalString,
-  imageUrl: optionalString,
+  imageUrl: optionalImageUrl,
 })
 
 export type LaptopFormValues = z.infer<typeof LaptopFormSchema>

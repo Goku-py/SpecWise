@@ -25,6 +25,7 @@ export const LaptopCard = memo(function LaptopCard({ laptop, priority }: { lapto
           width={200}
           height={112}
           priority={priority}
+          sizes="(max-width: 640px) 45vw, 200px"
           className="max-h-28 object-contain transition-transform group-hover:scale-105"
         />
       </div>

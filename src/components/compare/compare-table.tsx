@@ -72,6 +72,7 @@ export function CompareTable({
                 alt={`${col.brand} ${col.model}`}
                 width={240}
                 height={150}
+                sizes="(max-width: 640px) 80vw, 240px"
                 className="max-h-36 object-contain"
               />
             </div>
@@ -140,9 +141,10 @@ export function CompareTable({
                     <div className="mb-2 flex items-center justify-center rounded bg-background/40 p-2">
                       <ProductImage
                         src={col.imageUrl}
-                        alt=""
+                        alt={`${col.brand} ${col.model}`}
                         width={160}
                         height={100}
+                        sizes="160px"
                         className="max-h-20 object-contain"
                       />
                     </div>

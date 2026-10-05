@@ -14,7 +14,8 @@ import {
 } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { buildAffiliateUrl } from "@/lib/affiliate"
-import { ProductImage } from "@/components/ui/product-image"
+import { DetailGallery } from "@/components/ui/detail-gallery"
+import { isAllowedProductImageUrl } from "@/lib/product-image"
 import {
   DetailPriceLine,
   DetailPricingTable,
@@ -162,7 +163,7 @@ function buildProductJsonLd(laptop: LaptopDetail, region: string): ProductJsonLd
     // Phase 2a: canonical URL uses the slug (no encoding needed); fall back to
     // the encoded legacy id only if the slug was never backfilled.
     url: new URL(`/laptops/${laptop.slug ?? encodeURIComponent(laptop.id)}`, BASE_URL).toString(),
-    ...(laptop.imageUrl ? { image: laptop.imageUrl } : {}),
+    ...(isAllowedProductImageUrl(laptop.imageUrl) ? { image: laptop.imageUrl } : {}),
     ...(pick
       ? {
           offers: {
@@ -401,16 +402,12 @@ export default async function LaptopDetailPage({
       </dl>
 
       {/* Image — LCP element, so mark priority (never lazy) */}
-      <div className="mb-8 flex items-center justify-center rounded border border-border bg-card p-8">
-        <ProductImage
-          src={laptop.imageUrl}
-          alt={`${laptop.brand} ${laptop.model}`}
-          width={400}
-          height={256}
-          priority
-          className="max-h-64 object-contain"
-        />
-      </div>
+      <DetailGallery
+        images={laptop.imageUrl ? [{ src: laptop.imageUrl }] : []}
+        brand={laptop.brand}
+        model={laptop.model}
+        priority
+      />
 
       {/* Hardware Explorer — lazy client island */}
       <div className="mb-8">

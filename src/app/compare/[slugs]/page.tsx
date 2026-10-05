@@ -10,6 +10,7 @@ import {
 } from "@/components/compare/compare-table"
 import { ComparePersonalization } from "@/components/compare/compare-personalization"
 import { canonicalComparisonPath } from "@/lib/compare-pairs"
+import { isAllowedProductImageUrl } from "@/lib/product-image"
 import { getRegionFromCookies } from "@/lib/region"
 import { getRegion } from "@/lib/regions"
 import { formatPrice } from "@/lib/utils"
@@ -186,7 +187,7 @@ function productNode(l: LaptopDetail, region: string): ProductNode {
     brand: { "@type": "Brand", name: l.brand },
     description: `Specs: ${specSummary(l)}.`,
     url: new URL(`/laptops/${l.slug ?? encodeURIComponent(l.id)}`, BASE_URL).toString(),
-    ...(l.imageUrl ? { image: l.imageUrl } : {}),
+    ...(isAllowedProductImageUrl(l.imageUrl) ? { image: l.imageUrl } : {}),
     ...(best
       ? {
           offers: {
@@ -227,7 +228,9 @@ export async function generateMetadata({ params }: ComparePageProps): Promise<Me
   // precedent as the detail route's legacy-id redirect (single canonical URL
   // per pair, no duplicate-URL debt from selection affordances).
   if (`/compare/${slugs}` !== canonical) permanentRedirect(canonical)
-  const image = a.imageUrl ?? b.imageUrl
+  // First VALIDATED image wins — a legacy non-allowlisted row must never
+  // reach OG/Twitter metadata (silent broken social preview otherwise).
+  const image = [a.imageUrl, b.imageUrl].find(isAllowedProductImageUrl) ?? null
 
   return {
     title,

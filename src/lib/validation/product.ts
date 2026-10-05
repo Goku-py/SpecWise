@@ -6,6 +6,7 @@
  * changes, update the matching const + schema here in the same commit.
  */
 import { z } from "zod"
+import { isAllowedProductImageUrl } from "@/lib/product-image"
 
 // ── Enums (sync with prisma/schema.prisma) ────────────────────────────────
 
@@ -185,7 +186,10 @@ export const ProductBaseSchema = z.object({
   slug: SlugSchema,
   status: StatusSchema.default("active"),
   isPopular: z.boolean().default(false),
-  imageUrl: z.string().url().max(2048).nullable().optional(),
+  imageUrl: z.string().url().max(2048).nullable().optional().refine(
+    v => v == null || isAllowedProductImageUrl(v),
+    "imageUrl must be an https://images.unsplash.com/… URL",
+  ),
   reviewScore: z.number().min(0).max(10).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   dataSource: DatasourceKindSchema.default("seed"),

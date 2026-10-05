@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { invalidateCatalogCache } from "@/lib/catalog-cache"
+import { isAllowedProductImageUrl } from "@/lib/product-image"
 import { slugify, uniqueSlug, deterministicLaptopId } from "@/lib/slug"
 import type { LaptopFormValues } from "@/lib/laptop-fields"
 import type { Laptop, LaptopPrice, Status, Prisma } from "@/generated/prisma/client"
@@ -61,7 +62,18 @@ export function validateLaptopPatch(body: unknown): { data: LaptopPatchData; err
 
     if ((LAPTOP_EDITABLE_FIELDS.string as readonly string[]).includes(key)) {
       if (typeof value !== "string") return { data: {}, error: `Field ${key} must be a string` }
-      data[key] = value
+      // Write-time image gate (Phase 8): "" clears (stored as-is, renders as
+      // fallback via `!src`); any other value must be an allowlisted https URL
+      // so a stored imageUrl can never crash next/image at render.
+      if (key === "imageUrl") {
+        const trimmed = value.trim()
+        if (trimmed !== "" && !isAllowedProductImageUrl(trimmed)) {
+          return { data: {}, error: "Field imageUrl must be an https://images.unsplash.com/… URL" }
+        }
+        data[key] = trimmed
+      } else {
+        data[key] = value
+      }
     } else if ((LAPTOP_EDITABLE_FIELDS.number as readonly string[]).includes(key)) {
       if (typeof value !== "number" || !Number.isFinite(value)) {
         return { data: {}, error: `Field ${key} must be a number` }
