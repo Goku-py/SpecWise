@@ -273,6 +273,12 @@ async function invalidateCatalogCacheAfterSeed() {
 }
 
 async function fetchUnsplashImages() {
+  // Phase 9 §0 integrity correction: AUTOMATIC first-hit assignment is DISABLED.
+  // A valid product image requires explicit verified product-to-image association.
+  // This step is REPORT-ONLY: it prints candidate Unsplash URLs per laptop for
+  // MANUAL verification. To attach an image, verify the photo depicts the exact
+  // product, then set imageUrl via the admin UI or import (both enforce the
+  // allowlist + URL validation gates).
   // Phase 3: network image I/O is opt-in — core seed correctness never depends
   // on it (rows are complete with imageUrl null).
   if (process.env.SEED_FETCH_IMAGES !== "1") {
@@ -296,8 +302,8 @@ async function fetchUnsplashImages() {
       const data = (await res.json()) as { results?: Array<{ urls: { small: string } }> }
       if (!data.results?.length) { console.warn(`  No results for ${l.brand} ${l.model}`); continue }
       const imgUrl = data.results[0].urls.small
-      await prisma.laptop.update({ where: { id: l.id }, data: { imageUrl: imgUrl } })
-      console.log(`  ✓ ${l.brand} ${l.model}`)
+      // Phase 9 §0: report-only — first-hit auto-assignment disabled (see above).
+      console.log(`  candidate for ${l.brand} ${l.model}: ${imgUrl}`)
     } catch (e) {
       console.warn(`  ✗ ${l.brand} ${l.model}:`, e)
     }

@@ -1,0 +1,23 @@
+# SPECWISE V2 — PHASE 9 TRACEABILITY (3D hero: requirement → implementation → test → verification)
+
+> Covers Phase 9 3D-hero work only. Pre-existing Phase 2–5 work is out of scope and untouched.
+
+| # | Requirement (source) | Implementation | Test | Verification | Status |
+|---|---|---|---|---|---|
+| 1 | Re-verify audit claims by reading 3D files; correct audit doc only if factually wrong | Read wrapper/bundle/scene/model/shell/highlights + hero/landing/globals/theme; edited `SPECWISE-V2-PHASE-9-AUDIT.md` §§2/4/5/6 (4 deltas, see 3D doc §3) | Source-value cross-check (all numbers traced to line) | 4 overstatements corrected, rest confirmed | DONE |
+| 2 | Interaction restraint: confirm parallax (±0.5/±0.3), yaw (±0.12), 6 s cycle, scroll explode do not compete with CTA; damp only on demonstrated competition | No code change — values confirmed in source (`Rig`, `YawGroup`, 6000 ms interval, ×0.85 explode) and CTA dominance confirmed in 4 themed screenshots | Visual inspection of all 6 screenshots (each opened) | No competition demonstrable → default no-change honored | DONE, NO-CHANGE |
+| 3 | Light-mode intentionality: screenshot Light + Dark; touch materials/lighting/grid only on genuine breakage | No code change — 6D ACCEPTABLE re-confirmed with fresh Light evidence (dark chassis as product-render contrast, theme-aware `--hero-grid`) | `hero-desktop-light.png` + `hero-mobile-light.png` viewed | No breakage → no change | DONE, NO-CHANGE |
+| 4 | Performance measurement (primary): asset size, texture inventory, JS cost, frameloop in/out of view, LCP/CLS, mobile gating; measure before/after any change; reject regressions | No perf-impacting change made; full table in 3D doc §17 (0 external assets, 881 KB/232 KB gzip lazy chunk, texture math, frameloop states, CLS-by-construction) | Prod `npm run build` chunk analysis + live resource-timing/network probes + gzip measure | Fix removes a Canvas mount (strictly cheaper); normal path byte-identical | DONE |
+| 5 | Failure paths: WebGL-unavailable → poster, render-error → boundary poster, low-power → low quality/poster | No code change needed except via Req 6 fix; chunk-failure LIVE-SIMULATED (route-abort → poster, usable page); low-power live at 390 px | `hero-poster-state.png` viewed; 390 px canvases probed live | All paths hold | DONE |
+| 6 | Reduced motion: verify static-first + no cycling/parallax/explode, real browser setting preferred | `scene-shell.tsx` one-guard fix (`webglFailed \|\| reduced` → poster) after browser-verified blank-canvas failure | Real `prefers-reduced-motion: reduce` emulation: pre-fix blank (FAIL), post-fix poster + reset caption (PASS); `hero-reduced-motion.png` viewed | Static-first now literally true; cycling/parallax/explode confirmed inert | DONE, 1 FIX |
+| 7 | A11y/security/honesty: canvas aria-hidden + DOM meaning, no traps, no remote assets, no product/score/price claims | No change — all confirmed by source read + live DOM probes (aria-hidden, figcaption, closed vocab, zero asset URLs) | Code read + screenshot caption review | Holds | DONE, NO-CHANGE |
+| 8 | `npx tsc --noEmit` exit 0; theme + homepage (+ any 3D) unit tests; `npm run build` succeeds; `npm run lint` zero new errors in touched files | Fix is a 3-line guard with no type surface change | tsc 0 (×2); vitest 17/17 pass; build 18/18 pages; lint 9E/7W = baseline, 0 in `scene-shell.tsx` | All gates green | DONE |
+| 9 | Screenshots actually viewed: Desktop Light/Dark, Mobile Light/Dark hero + reduced-motion + loading/poster, saved OUTSIDE repo | 6 PNGs in `C:\Users\Pratik\AppData\Local\Temp\opencode\specwise-9\`, each opened via image read; repo verified clean of artifacts | Viewer confirmations in 3D doc §20 | 6/6 viewed with verdicts | DONE |
+| 10 | Write `SPECWISE-V2-PHASE-9-3D.md` (21 sections) + this traceability doc | Both written; 3D doc §17 holds the measurements table | Section count + content cross-check vs task items 1–9 | Complete | DONE |
+| 11 | DO NOT commit/push/Phase-10; DO NOT touch engine/quiz/results/homepage-copy/themes/images/prisma/API | Only `scene-shell.tsx` + 3 untracked report docs touched; `git status` confirms pre-existing Phase 2–5 set otherwise intact | Final `git status --short` review | Honored — awaiting team-lead staging | DONE |
+
+## Residual knowns (not requirements, not fixed)
+
+- R1: SSR reduced-motion flash (canvas→poster correction). Pre-existing class, documented in 3D doc §12.
+- R2: Low-quality caption/scene stage divergence (caption names stages the assembled model doesn't show). Documented nuance, 3D doc §8.
+- R3: Heap attribution inconclusive in dev; WebGL-dead/render-error paths code-verified only. Stated in 3D doc §§13/17/21.

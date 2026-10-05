@@ -51,7 +51,9 @@ export function SceneShell({ children, quality, poster, className }: SceneShellP
   const frameloop: "always" | "never" = !inView || reduced ? "never" : "always";
   const dpr: [number, number] = quality === "low" ? [1, 1.25] : [1, 1.75];
 
-  if (webglFailed) {
+  // ponytail: frameloop "never" renders zero frames (blank canvas observed),
+  // so reduced-motion gets the designed static poster instead of a Canvas.
+  if (webglFailed || reduced) {
     return (
       <div ref={containerRef} aria-hidden="true" className={className}>
         {poster}

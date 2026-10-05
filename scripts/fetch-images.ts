@@ -1,4 +1,10 @@
-// ponytail: one-shot script to populate laptop imageUrl from Unsplash
+// Phase 9 §0 integrity correction: AUTOMATIC first-hit assignment is DISABLED.
+// A valid product image requires explicit verified product-to-image association —
+// a keyword search's first hit must never become a product image sight-unseen.
+// This script is now REPORT-ONLY: it prints candidate Unsplash URLs per laptop
+// for MANUAL verification. To attach an image, verify the photo depicts the exact
+// product, then set imageUrl via the admin UI or import (both enforce the
+// allowlist + URL validation gates).
 // Usage: npx tsx scripts/fetch-images.ts
 // Requires UNSPLASH_ACCESS_KEY in .env
 
@@ -39,8 +45,9 @@ async function main() {
 
       const imgUrl = data.results[0].urls?.small
       if (!imgUrl) { console.warn(`  No image URL for ${l.brand} ${l.model}`); continue }
-      await prisma.laptop.update({ where: { id: l.id }, data: { imageUrl: imgUrl } })
-      console.log(`  ✓ ${l.brand} ${l.model}`)
+      // Phase 9 §0: report-only — first-hit auto-assignment disabled (see header).
+      // Verify manually, then set imageUrl via admin UI / import.
+      console.log(`  candidate for ${l.brand} ${l.model}: ${imgUrl}`)
     } catch (e) {
       console.warn(`  ✗ ${l.brand} ${l.model}:`, e)
     }
