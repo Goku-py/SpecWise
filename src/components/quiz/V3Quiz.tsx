@@ -197,8 +197,8 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                 </div>
                 {gamingSel && (
                   <fieldset className="mt-6">
-                    <legend className="mb-3 font-mono text-xs uppercase tracking-wider text-muted">Which describes your gaming?</legend>
-                    <div className="flex flex-wrap gap-2">
+                    <legend className="font-mono text-xs uppercase tracking-wider text-muted">Which describes your gaming?</legend>
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {([["esports", "Competitive high-refresh"], ["aaa", "Story-driven AAA"], ["both", "Both"]] as const).map(([v, label]) => (
                         <Chip key={v} active={gamingSel.subprofile === v} onClick={() => store.setGamingSubtype(v)}>{label}</Chip>
                       ))}
@@ -215,7 +215,7 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                   <p className="text-sm leading-relaxed text-muted">Prices shown in your region&apos;s currency.</p>
                 </div>
                 <fieldset>
-                  <legend className="mb-3 font-mono text-xs uppercase tracking-wider text-muted">Region</legend>
+                  <legend className="font-mono text-xs uppercase tracking-wider text-muted">Region</legend>
                   <select
                     aria-label="Region"
                     value={profile.region}
@@ -225,7 +225,7 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                       // persist the cookie + notify the header picker instantly.
                       void setClientRegion(e.target.value).then(() => router.refresh())
                     }}
-                    className="rounded border border-border bg-card px-3 py-2 text-sm text-foreground"
+                    className="mt-4 rounded border border-border bg-card px-3 py-2 text-sm text-foreground"
                   >
                     {REGIONS.map((r) => (
                       <option key={r.code} value={r.code}>{r.flag} {r.label} ({r.currency})</option>
@@ -233,8 +233,8 @@ export function V3Quiz({ region, sharedProfile }: { region: RegionConfig; shared
                   </select>
                 </fieldset>
                 <fieldset>
-                  <legend className="mb-3 font-mono text-xs uppercase tracking-wider text-muted">Budget ({profile.currency})</legend>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-[9rem_9rem_auto] sm:items-end">
+                  <legend className="font-mono text-xs uppercase tracking-wider text-muted">Budget ({profile.currency})</legend>
+                  <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-[9rem_9rem_auto] sm:items-end">
                     <label className="flex flex-col gap-1.5">
                       <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">Min</span>
                       <input
