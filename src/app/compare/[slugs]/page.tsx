@@ -1,10 +1,14 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { notFound } from "next/navigation"
-import { ArrowLeft, Star } from "lucide-react"
-import { BuyButton } from "@/components/product/buy-button"
-import { ProductImage } from "@/components/ui/product-image"
+import { notFound, permanentRedirect } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
 import { getLaptopById, getLaptopBySlug, pickBestOffer } from "@/lib/catalog-cache"
+import { visibleCompareRows } from "@/components/compare/compare-rows"
+import {
+  CompareTable,
+  type CompareTableColumn,
+} from "@/components/compare/compare-table"
+import { ComparePersonalization } from "@/components/compare/compare-personalization"
 import { canonicalComparisonPath } from "@/lib/compare-pairs"
 import { getRegionFromCookies } from "@/lib/region"
 import { getRegion } from "@/lib/regions"
@@ -88,7 +92,7 @@ interface CompareOffer {
 }
 
 /** Cheapest current offer for the visitor's region (never another region's price). */
-function regionBestOffer(l: LaptopDetail, region: string): { best: CompareOffer | null } {
+function regionBestOffer(l: LaptopDetail, region: string): { best: CompareOffer | null, stale: boolean } {
   const rows: CompareOffer[] = l.prices
     .filter((p: PriceEntry) => p.region === region)
     .map((p: PriceEntry) => ({
@@ -99,7 +103,8 @@ function regionBestOffer(l: LaptopDetail, region: string): { best: CompareOffer 
       inStock: p.inStock !== false,
       validUntil: p.validUntil ?? null,
     }))
-  return { best: pickBestOffer(rows).best }
+  const { best, stale } = pickBestOffer(rows)
+  return { best, stale }
 }
 
 function priceLabel(offer: CompareOffer | null): string {
@@ -218,6 +223,10 @@ export async function generateMetadata({ params }: ComparePageProps): Promise<Me
   const title = `${nameOf(a)} vs ${nameOf(b)} — SpecWise`
   const description = `${nameOf(a)} vs ${nameOf(b)}: side-by-side specs, prices, battery, and display compared to help you pick the right laptop.`
   const canonical = canonicalPath(a, b)
+  // Non-canonical order (b-vs-a) 308s to the canonical order — same
+  // precedent as the detail route's legacy-id redirect (single canonical URL
+  // per pair, no duplicate-URL debt from selection affordances).
+  if (`/compare/${slugs}` !== canonical) permanentRedirect(canonical)
   const image = a.imageUrl ?? b.imageUrl
 
   return {
@@ -242,57 +251,9 @@ export async function generateMetadata({ params }: ComparePageProps): Promise<Me
 }
 
 // ── Spec rows ──────────────────────────────────────────────────────────────
-
-interface CompareRow {
-  label: string
-  get: (l: LaptopDetail) => string
-}
-
-const COMPARE_ROWS: CompareRow[] = [
-  { label: "OS", get: l => l.os },
-  {
-    label: "CPU",
-    get: l =>
-      `${l.cpuBrand} ${l.cpuFamily}${l.cpuGeneration ? ` (${l.cpuGeneration})` : ""}`,
-  },
-  { label: "CPU Cores", get: l => (l.cpuCores != null ? `${l.cpuCores} cores` : "—") },
-  {
-    label: "GPU",
-    get: l =>
-      l.gpuType.toLowerCase() === "integrated"
-        ? "Integrated"
-        : `${l.gpuModel ?? "Dedicated"}${l.gpuVRAM != null ? ` · ${l.gpuVRAM} GB` : ""}`,
-  },
-  {
-    label: "RAM",
-    get: l =>
-      `${l.ramAmount} GB${l.ramType ? ` ${l.ramType}` : ""}${l.ramUpgradeable ? " (upgradeable)" : " (soldered)"}`,
-  },
-  {
-    label: "Storage",
-    get: l =>
-      `${l.storageAmount} GB ${l.storageType}${l.storageExpandable ? " + expandable" : ""}`,
-  },
-  {
-    label: "Display",
-    get: l =>
-      `${l.displaySize}"${l.displayResolution ? ` ${l.displayResolution}` : ""} ${l.displayRefreshRate}Hz`,
-  },
-  { label: "Panel", get: l => l.displayPanelType ?? "—" },
-  { label: "Brightness", get: l => (l.displayBrightness != null ? `${l.displayBrightness} nits` : "—") },
-  { label: "Touch", get: l => (l.displayTouch || l.isTouchscreen ? "Yes" : "No") },
-  { label: "Battery", get: l => (l.batteryLife != null ? `${l.batteryLife} hours` : "—") },
-  { label: "Battery Capacity", get: l => (l.batteryCapacity != null ? `${l.batteryCapacity} Wh` : "—") },
-  { label: "Weight", get: l => (l.weight != null ? `${l.weight} kg` : "—") },
-  { label: "Build", get: l => l.buildMaterial ?? "—" },
-  { label: "Webcam", get: l => l.webcamQuality ?? "—" },
-  { label: "Ports", get: l => (l.ports.length > 0 ? l.ports.join(", ") : "—") },
-  { label: "Wireless", get: l => l.wireless ?? "—" },
-  {
-    label: "Security",
-    get: l => (l.securityFeatures.length > 0 ? l.securityFeatures.join(", ") : "—"),
-  },
-]
+// Row definitions live in the shared module both compare routes import
+// (`@/components/compare/compare-rows`) — factual catalog projections, no
+// scoring. This route keeps exactly-2 semantics over the same rows.
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -303,8 +264,10 @@ export default async function CompareSlugsPage({ params }: ComparePageProps) {
   const [a, b] = pair
 
   const region = await getRegionFromCookies()
-  const offerA = regionBestOffer(a, region.code).best
-  const offerB = regionBestOffer(b, region.code).best
+  // Canonical 308 (body fallback — metadata fires pre-stream; see above).
+  if (`/compare/${slugs}` !== canonicalPath(a, b)) permanentRedirect(canonicalPath(a, b))
+  const { best: offerA, stale: staleA } = regionBestOffer(a, region.code)
+  const { best: offerB, stale: staleB } = regionBestOffer(b, region.code)
   const summary = geoSummary(a, b, regionPhrase(region.code), priceLabel(offerA), priceLabel(offerB))
 
   const jsonLd = {
@@ -312,10 +275,26 @@ export default async function CompareSlugsPage({ params }: ComparePageProps) {
     "@graph": [productNode(a, region.code), productNode(b, region.code)],
   }
 
-  const cards = [
-    { laptop: a, offer: offerA },
-    { laptop: b, offer: offerB },
-  ]
+  const laptops = [a, b]
+  const offerById = new Map([
+    [a.id, { best: offerA, stale: staleA }],
+    [b.id, { best: offerB, stale: staleB }],
+  ])
+  const columns: CompareTableColumn[] = laptops.map(l => {
+    const entry = offerById.get(l.id)
+    return {
+      id: l.id,
+      brand: l.brand,
+      model: l.model,
+      variant: l.variant,
+      imageUrl: l.imageUrl,
+      detailHref: `/laptops/${l.slug ?? encodeURIComponent(l.id)}`,
+      priceLabel: priceLabel(entry?.best ?? null),
+      priceStale: entry?.stale ?? false,
+      buyHref: entry?.best?.affiliateUrl ?? entry?.best?.url ?? null,
+    }
+  })
+  const { rows, hiddenCount } = visibleCompareRows(laptops)
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -351,86 +330,17 @@ export default async function CompareSlugsPage({ params }: ComparePageProps) {
         <p className="text-sm leading-relaxed text-foreground">{summary}</p>
       </section>
 
-      {/* Product cards */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2">
-        {cards.map(({ laptop, offer }) => (
-          <article key={laptop.id} className="rounded border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-center rounded bg-background/40 p-4">
-              <ProductImage
-                src={laptop.imageUrl}
-                alt={`${laptop.brand} ${laptop.model}`}
-                width={280}
-                height={180}
-                className="max-h-40 object-contain"
-              />
-            </div>
-            <Link
-              href={`/laptops/${laptop.slug ?? encodeURIComponent(laptop.id)}`}
-              className="text-base font-semibold text-foreground transition hover:text-accent"
-            >
-              {laptop.brand} {laptop.model}
-              {laptop.variant && <span className="text-muted"> ({laptop.variant})</span>}
-            </Link>
-            <div className="mt-1 flex items-center gap-3">
-              <span className="text-lg font-semibold text-foreground">{priceLabel(offer)}</span>
-              {laptop.reviewScore != null && (
-                <span className="flex items-center gap-1 text-xs text-muted">
-                  <Star className="h-3.5 w-3.5 text-yellow-500" />
-                  {laptop.reviewScore.toFixed(1)}/10
-                </span>
-              )}
-            </div>
-            <div className="mt-4">
-              <BuyButton
-                href={offer?.affiliateUrl ?? offer?.url ?? null}
-                size="sm"
-                className="w-full"
-                label="View Deal"
-              />
-            </div>
-          </article>
-        ))}
-      </div>
+      {/* Stored personalization (bound results only, display-only) */}
+      <ComparePersonalization ids={laptops.map(l => l.id)} />
 
-      {/* Spec table */}
-      <div className="overflow-hidden rounded border border-border bg-card shadow-sm">
-        <div
-          role="region"
-          aria-label="Laptop comparison table, horizontally scrollable"
-          tabIndex={0}
-          className="overflow-x-auto focus-visible:outline-none"
-        >
-          <table className="w-full min-w-[600px] border-collapse">
-            <thead>
-              <tr className="bg-elevated">
-                <th className="sticky left-0 z-10 min-w-[140px] bg-elevated pr-4 text-left font-mono text-[10px] font-semibold uppercase tracking-wider text-muted">
-                  Spec
-                </th>
-                {cards.map(({ laptop }) => (
-                  <th key={laptop.id} className="min-w-[200px] px-3 pb-4 pt-3 text-left">
-                    <div className="font-mono text-[10px] text-muted">{laptop.brand}</div>
-                    <div className="text-sm font-semibold text-foreground">{laptop.model}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARE_ROWS.map(row => (
-                <tr key={row.label} className="border-b border-border transition-colors hover:bg-accent/5">
-                  <td className="sticky left-0 z-10 bg-card py-3 pr-4 font-mono text-[10px] font-medium uppercase tracking-wider text-muted">
-                    {row.label}
-                  </td>
-                  {cards.map(({ laptop }) => (
-                    <td key={laptop.id} className="px-3 py-3 font-mono text-xs text-foreground">
-                      {row.get(laptop)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Shared comparison table (same rows as /compare) */}
+      <CompareTable
+        columns={columns}
+        rows={rows}
+        hiddenCount={hiddenCount}
+        ids={laptops.map(l => l.id)}
+        allowRemove={false}
+      />
 
       <p className="mt-6 text-xs text-muted">
         Prices shown for {regionPhrase(region.code)}. Run the{" "}

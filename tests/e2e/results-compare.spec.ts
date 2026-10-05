@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { collectConsoleErrors, shouldHaveNoConsoleErrors, seedResults, seedV3Results } from "./helpers"
-import { SEEDED_RESULTS, SEEDED_COMPARE_IDS } from "./fixtures/results"
+import { collectConsoleErrors, shouldHaveNoConsoleErrors, seedV3Results } from "./helpers"
 
 /**
  * Results (v3 DTO) + compare pages. Results hydrates the v3 DTO from
@@ -14,7 +13,7 @@ test.describe("results page", () => {
     seedV3Results(page, 3)
 
     await page.goto("/results")
-    await expect(page.getByRole("heading", { level: 1, name: "Your Matches" })).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1, name: "Your best match" })).toBeVisible()
     await expect(page.getByText("Best match")).toBeVisible()
     await expect(page.getByText("More options")).toBeVisible()
     await expect(page.getByTestId("top-specs")).toBeVisible()
@@ -38,43 +37,29 @@ test.describe("results page", () => {
 })
 
 test.describe("compare page", () => {
-  test("renders the comparison table for selected ids", async ({ page }) => {
+  test("empty state renders when no ids are selected", async ({ page }) => {
     const errors = collectConsoleErrors(page)
-    seedResults(page, { laptops: SEEDED_RESULTS })
-
-    await page.goto(`/compare?ids=${SEEDED_COMPARE_IDS.join(",")}`)
-    await expect(page.getByRole("heading", { level: 1, name: "Compare Laptops" })).toBeVisible()
-    await expect(page.getByRole("region", { name: "Laptop comparison table, horizontally scrollable" })).toBeVisible()
-
-    // Two model headers
-    await expect(page.getByRole("table").getByText("Stealth 14 Studio")).toBeVisible()
-    await expect(page.getByRole("table").getByText("Predator Helios 16")).toBeVisible()
-
-    // A sample of the row set renders
-    await expect(page.getByRole("table").getByText("Match Score", { exact: true })).toBeVisible()
-    await expect(page.getByRole("table").getByText("92%", { exact: true }).first()).toBeVisible()
-
-    // Keyboard-accessible scroll container
-    const region = page.getByRole("region", { name: "Laptop comparison table, horizontally scrollable" })
-    await expect(region).toHaveAttribute("tabindex", "0")
-
+    await page.goto("/compare")
+    await expect(page.getByRole("heading", { level: 1, name: "Compare laptops" })).toBeVisible()
+    await expect(page.getByRole("heading", { level: 2, name: "No laptops selected" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Take the quiz" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Browse laptops" }).first()).toBeVisible()
     shouldHaveNoConsoleErrors(errors)
   })
 
-  test("empty state renders when no results are stored", async ({ page }) => {
+  test("unknown ids render an honest not-listed state", async ({ page }) => {
     const errors = collectConsoleErrors(page)
-    await page.goto("/compare?ids=MSI-Stealth-14-Studio")
-    await expect(page.getByRole("heading", { level: 2, name: "No results found" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "Find Laptops" })).toBeVisible()
+    // Clearly-fake ids never resolve from the catalog, with or without a DB.
+    await page.goto("/compare?ids=no-such-laptop-aaa,no-such-laptop-bbb")
+    await expect(page.getByRole("heading", { level: 1, name: "Compare laptops" })).toBeVisible()
+    await expect(page.getByText("Not listed: no-such-laptop-aaa, no-such-laptop-bbb")).toBeVisible()
     shouldHaveNoConsoleErrors(errors)
   })
 
   test("hydrates cleanly (regression: old hydration mismatch on first client render)", async ({ page }) => {
     const errors = collectConsoleErrors(page)
-    seedResults(page, { laptops: SEEDED_RESULTS })
-
-    await page.goto(`/compare?ids=${SEEDED_COMPARE_IDS[0]}`)
-    await expect(page.getByRole("table")).toBeVisible()
+    await page.goto("/compare")
+    await expect(page.getByRole("heading", { level: 1, name: "Compare laptops" })).toBeVisible()
     await page.waitForTimeout(500) // let any hydration work finish
     shouldHaveNoConsoleErrors(errors)
   })

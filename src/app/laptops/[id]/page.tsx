@@ -22,9 +22,12 @@ import {
 } from "@/components/product/detail-pricing"
 import { getActiveCatalog, getLaptopById, getLaptopBySlug } from "@/lib/catalog-cache"
 import { canonicalComparisonPath } from "@/lib/compare-pairs"
+import { compareHref } from "@/lib/compare-select"
 import { normalizeRegion } from "@/lib/regions"
 import { REGION_COOKIE } from "@/proxy"
 import { ExplorerWrapper } from "@/components/laptop/explorer-wrapper"
+import { DetailMatchStrip } from "@/components/compare/detail-match-strip"
+import { buttonVariants } from "@/components/ui/button"
 import type { LaptopDetail, PriceEntry } from "@/lib/types"
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -310,6 +313,23 @@ export default async function LaptopDetailPage({
       }))
     : []
 
+  // Key evidence — factual catalog values for the decision hierarchy (never
+  // scored claims). Unknown specs stay "Not listed".
+  const keyEvidence: Array<[string, string]> = [
+    ["Processor", `${laptop.cpuBrand} ${laptop.cpuFamily}`],
+    [
+      "Graphics",
+      laptop.gpuType.toLowerCase() === "integrated"
+        ? "Integrated"
+        : (laptop.gpuModel ?? "Dedicated graphics"),
+    ],
+    ["Memory", `${laptop.ramAmount} GB${laptop.ramType ? ` ${laptop.ramType}` : ""}`],
+    [
+      "Display",
+      `${laptop.displaySize}"${laptop.displayResolution ? ` ${laptop.displayResolution}` : ""}`,
+    ],
+  ]
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <script
@@ -353,7 +373,32 @@ export default async function LaptopDetailPage({
         {laptop.isRefurbished && (
           <p className="mt-1 text-xs text-amber-500">Refurbished model</p>
         )}
+        {/* Actions — Compare enters /compare with only this laptop selected;
+            the label promises no partner; rivals are suggested there. */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href={compareHref([laptop.id])}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Compare
+          </Link>
+        </div>
       </div>
+
+      {/* Stored match context — renders only when bound results match this laptop */}
+      <DetailMatchStrip laptopId={laptop.id} />
+
+      {/* Key evidence — factual catalog values, never scored claims */}
+      <dl className="mb-8 grid gap-px overflow-hidden rounded border border-border bg-border sm:grid-cols-2">
+        {keyEvidence.map(([label, value]) => (
+          <div key={label} className="flex items-baseline justify-between gap-4 bg-card px-4 py-3">
+            <dt className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-wider text-muted">
+              {label}
+            </dt>
+            <dd className="text-right font-mono text-xs text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
 
       {/* Image — LCP element, so mark priority (never lazy) */}
       <div className="mb-8 flex items-center justify-center rounded border border-border bg-card p-8">
