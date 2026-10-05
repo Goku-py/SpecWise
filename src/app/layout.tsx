@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer"
 import { BootSequenceWrapper } from "@/components/boot/boot-sequence-wrapper"
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { NO_FLASH_SCRIPT } from "@/components/theme/theme"
+import { stringifyJsonLd } from "@/lib/jsonld"
 import { prisma } from "@/lib/prisma"
 
 const geistSans = Geist({
@@ -103,7 +104,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: stringifyJsonLd(siteJsonLd) }}
         />
         <ThemeProvider>
         <BootSequenceWrapper laptopCount={laptopCount} />

@@ -1,5 +1,7 @@
 "use client"
 
+import { buttonVariants } from "@/components/ui/button"
+
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   console.error(error)
 
@@ -11,7 +13,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <p className="mt-2 text-sm text-muted">An unexpected error occurred. Please try again.</p>
         <button
           onClick={reset}
-          className="mt-6 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          className={buttonVariants({ className: "mt-6" })}
         >
           Try Again
         </button>

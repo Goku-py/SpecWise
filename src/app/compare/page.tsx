@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getActiveCatalog, getLaptopById, pickBestOffer } from "@/lib/catalog-cache";
+import { prisma } from "@/lib/prisma";
 import { getRegionFromCookies } from "@/lib/region";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -200,6 +201,16 @@ export default async function ComparePage({
     }
   } catch {
     catalogDown = true;
+  }
+
+  // Total miss may mask a full catalog outage (per-id .catch swallows DB
+  // errors). One uncached probe distinguishes outage from truly unlisted ids.
+  if (!catalogDown && laptops.length === 0 && missingIds.length === ids.length && ids.length > 0) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      catalogDown = true;
+    }
   }
 
   if (catalogDown) {

@@ -13,6 +13,7 @@ import { canonicalComparisonPath } from "@/lib/compare-pairs"
 import { isAllowedProductImageUrl } from "@/lib/product-image"
 import { getRegionFromCookies } from "@/lib/region"
 import { getRegion } from "@/lib/regions"
+import { stringifyJsonLd } from "@/lib/jsonld"
 import { formatPrice } from "@/lib/utils"
 import type { LaptopDetail, PriceEntry } from "@/lib/types"
 
@@ -149,13 +150,6 @@ function geoSummary(
 
 // ── Structured data ────────────────────────────────────────────────────────
 
-interface AggregateRating {
-  "@type": "AggregateRating"
-  ratingValue: number
-  bestRating: number
-  worstRating: number
-}
-
 interface ProductNode {
   "@type": "Product"
   name: string
@@ -170,13 +164,10 @@ interface ProductNode {
     price: number
     availability: string
   }
-  aggregateRating?: AggregateRating
 }
 
 /**
- * One Product per device, each with an AggregateRating when the catalog has a
- * review score. ratingCount/reviewCount are intentionally omitted — the catalog
- * holds no review volume, and fabricating one would be a lie in structured data.
+ * One Product per device. aggregateRating returns when real review volume exists.
  */
 function productNode(l: LaptopDetail, region: string): ProductNode {
   const { best } = regionBestOffer(l, region)
@@ -200,16 +191,7 @@ function productNode(l: LaptopDetail, region: string): ProductNode {
           },
         }
       : {}),
-    ...(l.reviewScore != null
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: l.reviewScore,
-            bestRating: 10,
-            worstRating: 0,
-          },
-        }
-      : {}),
+    // aggregateRating omitted: no reviewCount in catalog (invalid per Google) — returns when real review volume exists.
   }
 }
 
@@ -303,7 +285,7 @@ export default async function CompareSlugsPage({ params }: ComparePageProps) {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(jsonLd) }}
       />
 
       <Link

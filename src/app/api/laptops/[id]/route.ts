@@ -8,6 +8,16 @@ import { validateLaptopPatch, updateLaptop } from "@/lib/db/catalog"
 export const GET = withLogging(async (request, rid, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params
 
+  // Rate limit: 60 requests/minute/IP
+  const ip = getClientIP(request)
+  const rateLimit = await checkRateLimit(`get-laptop:${ip}`, 60, 60)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": "60" } }
+    )
+  }
+
   const laptop = await prisma.laptop.findUnique({
     where: { id },
     include: {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { buildAffiliateUrl } from "@/lib/affiliate"
+import { stringifyJsonLd } from "@/lib/jsonld"
 import { DetailGallery } from "@/components/ui/detail-gallery"
 import { isAllowedProductImageUrl } from "@/lib/product-image"
 import {
@@ -335,7 +336,7 @@ export default async function LaptopDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildProductJsonLd(laptop, region)) }}
+        dangerouslySetInnerHTML={{ __html: stringifyJsonLd(buildProductJsonLd(laptop, region)) }}
       />
       {/* Back link */}
       <Link
