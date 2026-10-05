@@ -23,7 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
-const SITE_TITLE = "SpecWise — Match your workload to exact laptop hardware"
+const SITE_TITLE = "SpecWise — Find the Right Laptop"
 const SITE_DESCRIPTION =
   "Zero affiliate bias. Zero jargon. Match your workload to exact laptop hardware specs. F-score ranked recommendations based on real hardware data."
 

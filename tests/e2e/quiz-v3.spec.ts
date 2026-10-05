@@ -123,6 +123,39 @@ test.describe("quiz v3 cutover", () => {
     shouldHaveNoConsoleErrors(errors);
   });
 
+  test("Budget step keeps label → field → control hierarchy", async ({ page }) => {
+    await page.goto("/quiz");
+    await page.getByRole("button", { name: /Study, work/ }).click();
+    await page.getByRole("button", { name: "NEXT", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "What's your budget?" })).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const legend = [...document.querySelectorAll("legend")].find((el) =>
+        /budget/i.test(el.textContent ?? "")
+      );
+      const minLabel = document.querySelector('input[aria-label="Minimum budget"]')?.closest("label");
+      const minInput = document.querySelector('input[aria-label="Minimum budget"]');
+      const maxInput = document.querySelector('input[aria-label="Maximum budget"]');
+      const noMax = document.querySelector('input[type="checkbox"]')?.closest("label");
+      if (!legend || !minLabel || !minInput || !maxInput || !noMax) return null;
+      const l = legend.getBoundingClientRect();
+      const ml = minLabel.getBoundingClientRect();
+      const mi = minInput.getBoundingClientRect();
+      const xi = maxInput.getBoundingClientRect();
+      const nm = noMax.getBoundingClientRect();
+      return {
+        legendToLabel: ml.top - l.bottom,
+        inputTopsEqual: Math.abs(mi.top - xi.top) <= 1,
+        noMaxOverlapsInputs: nm.top < mi.bottom && nm.bottom > mi.top,
+      };
+    });
+    expect(layout).not.toBeNull();
+    // Section label sits clearly above the field row (never touching/overlapping).
+    expect(layout!.legendToLabel).toBeGreaterThanOrEqual(12);
+    // Min/Max inputs share a baseline; "No maximum" rides the same row.
+    expect(layout!.inputTopsEqual).toBe(true);
+    expect(layout!.noMaxOverlapsInputs).toBe(true);
+  });
+
   test("Test 7 — Intent-hard contradiction reaches explicit revision state", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await goToMustHaves(page);
